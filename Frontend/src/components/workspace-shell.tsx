@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { logout } from "@/app/auth/actions";
 import { navigation, newsItems } from "@/lib/workspace";
 
-export function WorkspaceShell({ children }: { children: React.ReactNode }) {
+export function WorkspaceShell({ children, email }: { children: React.ReactNode; email?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobile, setMobile] = useState(false);
@@ -24,7 +25,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   return <main className="app-shell">
     <aside className={`sidebar ${mobile ? "sidebar-open" : ""}`}><Link className="brand" href="/dashboard"><span>DL</span><b>DEV LIFE</b></Link><Link className="new-button" href="/notes">＋ New note</Link><nav>{navigation.map(item => <Link key={item.href} className={pathname === item.href ? "active" : ""} href={item.href} onClick={() => setMobile(false)}><span>{item.icon}</span>{item.label}</Link>)}</nav><div className="repo-card"><small>DEMO REPOSITORY</small><b>dev-life / workspace</b><span>Read-only · รอเชื่อมต่อ</span></div></aside>
     {mobile && <button className="scrim" aria-label="ปิดเมนู" onClick={() => setMobile(false)} />}
-    <section className="workspace"><header className="topbar"><button className="mobile-toggle" aria-label="เปิดเมนู" onClick={() => setMobile(true)}>☰</button><button className="search-trigger" onClick={() => setPalette(true)}>⌕ <span>Search workspace...</span><kbd>⌘ K</kbd></button><div className="top-actions"><Link href="/ai-tools">✦ Ask AI <small>Demo</small></Link><button className="avatar">TJ</button></div></header><div className="content">{children}</div></section>
+    <section className="workspace"><header className="topbar"><button className="mobile-toggle" aria-label="เปิดเมนู" onClick={() => setMobile(true)}>☰</button><button className="search-trigger" onClick={() => setPalette(true)}>⌕ <span>Search workspace...</span><kbd>⌘ K</kbd></button><div className="top-actions"><Link href="/ai-tools">✦ Ask AI <small>Demo</small></Link><span>{email}</span><form action={logout}><button type="submit">Logout</button></form></div></header><div className="content">{children}</div></section>
     {palette && <div className="modal-layer" role="dialog" aria-modal="true" onMouseDown={() => setPalette(false)}><section className="palette" onMouseDown={e => e.stopPropagation()}><input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="ค้นหา workspace..." /><div className="palette-results"><p>{query ? "RESULTS" : "QUICK ACTIONS"}</p>{(query ? results : navigation.slice(0, 6).map(x => ({ title: x.label, type: "เปิดหน้า", href: x.href }))).map(item => <button key={`${item.href}-${item.title}`} onClick={() => go(item.href)}><span><b>{item.title}</b><small>{item.type}</small></span><kbd>↵</kbd></button>)}</div></section></div>}
   </main>;
 }
