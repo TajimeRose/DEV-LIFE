@@ -1,29 +1,21 @@
-export type NavItem = { href: string; label: string; icon: string };
-export type Priority = "สูง" | "กลาง" | "ต่ำ";
+export type NavItem = { href: string; label: string; icon: string; group: "Workspace" | "Tools" };
+export type Priority = "ทั่วไป" | "สำคัญ" | "สำคัญมาก";
 export type Task = { id: number; title: string; done: boolean; priority: Priority };
 export type Card = { id: number; title: string; tag: string };
 export type Columns = Record<"Backlog" | "In progress" | "Review" | "Done", Card[]>;
 
 export const navigation: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: "⌂" },
-  { href: "/notes", label: "Notes", icon: "▤" },
-  { href: "/checklists", label: "Checklists", icon: "✓" },
-  { href: "/board", label: "Board", icon: "▦" },
-  { href: "/flowchart", label: "Flowchart", icon: "◇" },
-  { href: "/templates", label: "Templates", icon: "◫" },
-  { href: "/search", label: "Search", icon: "⌕" },
-  { href: "/inbox", label: "Inbox", icon: "↓" },
-  { href: "/activity", label: "Activity", icon: "◎" },
-  { href: "/context-map", label: "Context map", icon: "⌘" },
-  { href: "/ai-tools", label: "AI tools", icon: "✦" },
-  { href: "/github", label: "GitHub", icon: "⑂" },
-  { href: "/news", label: "Dev news", icon: "◉" },
+  { href: "/dashboard", label: "Overview", icon: "⌂", group: "Workspace" },
+  { href: "/notes", label: "Notes", icon: "N", group: "Workspace" },
+  { href: "/checklists", label: "Tasks", icon: "✓", group: "Workspace" },
+  { href: "/activity", label: "Activity", icon: "↻", group: "Workspace" },
+  { href: "/board", label: "Board", icon: "▦", group: "Tools" },
 ];
 
 export const initialTasks: Task[] = [
-  { id: 1, title: "สรุป onboarding user flow", done: true, priority: "สูง" },
-  { id: 2, title: "ออกแบบ GitHub read-only view", done: false, priority: "สูง" },
-  { id: 3, title: "เขียน API design document", done: false, priority: "กลาง" },
+  { id: 1, title: "สรุป onboarding user flow", done: true, priority: "สำคัญมาก" },
+  { id: 2, title: "ออกแบบ GitHub read-only view", done: false, priority: "สำคัญมาก" },
+  { id: 3, title: "เขียน API design document", done: false, priority: "สำคัญ" },
 ];
 
 export const initialColumns: Columns = {
