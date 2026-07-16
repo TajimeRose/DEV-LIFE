@@ -12,6 +12,12 @@ const registration = credentials.extend({ confirmPassword: z.string().min(6) }).
 export type LoginState = { error: string } | null;
 export type RegisterState = { error?: string; success?: string } | null;
 export type ProfileState = { error?: string; success?: string } | null;
+export type GitHubAuthState = { error: string } | null;
+
+function callbackUrl() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  return `${siteUrl.replace(/\/$/, "")}/auth/callback`;
+}
 
 export async function login(_state: LoginState, formData: FormData): Promise<LoginState> {
   const result = credentials.safeParse(Object.fromEntries(formData));
@@ -28,11 +34,21 @@ export async function register(_state: RegisterState, formData: FormData): Promi
   const { data, error } = await (await createClient()).auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback` },
+    options: { emailRedirectTo: callbackUrl() },
   });
   if (error) return { error: "ไม่สามารถสมัครสมาชิกได้ กรุณาตรวจสอบข้อมูลหรือลองใหม่อีกครั้ง" };
   if (data.session) redirect("/projects");
   return { success: "สมัครสมาชิกสำเร็จ กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชีก่อนเข้าสู่ระบบ" };
+}
+
+export async function signInWithGitHub(_state: GitHubAuthState): Promise<GitHubAuthState> {
+  void _state;
+  const { data, error } = await (await createClient()).auth.signInWithOAuth({
+    provider: "github",
+    options: { redirectTo: callbackUrl() },
+  });
+  if (error || !data.url) return { error: "ไม่สามารถเชื่อมต่อ GitHub ได้ กรุณาลองใหม่อีกครั้ง" };
+  redirect(data.url);
 }
 
 export async function updateProfile(_state: ProfileState, formData: FormData): Promise<ProfileState> {

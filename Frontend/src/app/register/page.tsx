@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { register } from "@/app/auth/actions";
+import { GitHubAuthButton } from "@/components/auth/GitHubAuthButton";
 import { Button, Card, FormField, Input } from "@/components/ui";
 
 function SubmitButton() {
@@ -51,6 +52,8 @@ export default function RegisterPage() {
             <FormField label="ยืนยันรหัสผ่าน"><Input name="confirmPassword" type="password" autoComplete="new-password" placeholder="กรอกรหัสผ่านอีกครั้ง" minLength={6} required /></FormField>
             <SubmitButton />
           </form>
+          <div className="auth-divider"><span>หรือ</span></div>
+          <GitHubAuthButton label="สมัครสมาชิกด้วย GitHub" />
           <p className="auth-switch">มีบัญชีอยู่แล้ว? <Link href="/login">เข้าสู่ระบบ</Link></p>
         </Card>
         <p className="auth-copyright">© 2026 DEV LIFE · Developer productivity workspace</p>

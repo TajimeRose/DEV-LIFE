@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useActionState } from "react";
+import { use, useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { login } from "@/app/auth/actions";
+import { GitHubAuthButton } from "@/components/auth/GitHubAuthButton";
 import { Button, Card, FormField, Input } from "@/components/ui";
 
 function SubmitButton() {
@@ -18,8 +19,9 @@ function SubmitButton() {
   );
 }
 
-export default function LoginPage() {
+export default function LoginPage({ searchParams }: { searchParams: Promise<{ authError?: string }> }) {
   const [state, formAction] = useActionState(login, null);
+  const params = use(searchParams);
 
   return (
     <main className="auth-shell">
@@ -46,12 +48,15 @@ export default function LoginPage() {
           <small className="auth-eyebrow">WELCOME BACK</small>
           <h2>เข้าสู่ระบบ</h2>
           <p className="auth-description">กรอกข้อมูลเพื่อกลับเข้าสู่ DEV LIFE workspace ของคุณ</p>
+          {params.authError === "github" && <p className="auth-error" role="alert">เข้าสู่ระบบด้วย GitHub ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>}
           <form className="auth-form" action={formAction}>
             {state?.error && <p className="auth-error" role="alert">{state.error}</p>}
             <FormField label="อีเมล"><Input name="email" type="email" autoComplete="email" placeholder="name@example.com" required /></FormField>
             <FormField label="รหัสผ่าน" hint="อย่างน้อย 6 ตัวอักษร"><Input name="password" type="password" autoComplete="current-password" placeholder="กรอกรหัสผ่าน" minLength={6} required /></FormField>
             <SubmitButton />
           </form>
+          <div className="auth-divider"><span>หรือ</span></div>
+          <GitHubAuthButton label="เข้าสู่ระบบด้วย GitHub" />
           <p className="auth-switch">ยังไม่มีบัญชี? <Link href="/register">สมัครสมาชิกฟรี</Link></p>
           <div className="auth-secure"><span aria-hidden="true">◇</span><p><b>Secure authentication</b><small>บัญชีและ session ของคุณได้รับการจัดการผ่าน Supabase Auth</small></p></div>
         </Card>
