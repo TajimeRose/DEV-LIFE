@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState, useTransition } from "react";
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { createNote, createProject, createTask, updateNote, updateTask } from "@/app/actions/data";
 import { Badge, Button, Card, EmptyState, FormField, Input, Modal, Select, Textarea, useToast } from "@/components/ui";
 import type { Activity, Note, Project, Task } from "@/lib/database.types";
@@ -82,7 +82,21 @@ export function ConnectedTasks({ project, initial }: { project: Project; initial
       }
     });
   };
-  return <><div className="heading"><div><small>TASKS</small><h1>{project.name}</h1><p>จัดลำดับความเร่งและติดตามงานทั้งหมด</p></div><Link className="view-board" href="/board">ดูแบบ Board</Link></div><section className="panel feature-panel"><div className="checklist">{tasks.map(task => <div className="task" key={task.id}><input aria-label={`ทำเครื่องหมาย ${task.title}`} type="checkbox" checked={task.status === "done"} onChange={() => toggle(task)} /><span className={task.status === "done" ? "strike" : ""}>{task.title}</span><em className={`priority ${priorityClass(task.priority)}`}>{priorityLabel(task.priority)}</em></div>)}{!tasks.length && <p className="empty-copy">ยังไม่มี task</p>}{error && <p className="form-error" role="alert">{error}</p>}<form className="task-form" onSubmit={add}><Input aria-label="ชื่อ task" value={title} onChange={event => setTitle(event.target.value)} placeholder="เพิ่ม task…" required /><Select aria-label="ความเร่ง" value={priority} onChange={event => setPriority(event.target.value)}><option>ทั่วไป</option><option>สำคัญ</option><option>สำคัญมาก</option></Select><Button variant="primary" loading={pending}>เพิ่มงาน</Button></form></div></section></>;
+  const changePriority = (task: Task, nextPriority: string) => {
+    if (priorityLabel(task.priority) === nextPriority) return;
+    setError("");
+    setTasks(current => current.map(item => item.id === task.id ? { ...item, priority: nextPriority } : item));
+    startTransition(async () => {
+      try {
+        const updated = await updateTask(task.id, { priority: nextPriority }, `เปลี่ยนความสำคัญเป็น ${nextPriority}`);
+        setTasks(current => current.map(item => item.id === updated.id ? updated : item));
+      } catch (cause) {
+        setTasks(current => current.map(item => item.id === task.id ? task : item));
+        setError(cause instanceof Error ? cause.message : "เปลี่ยนความสำคัญไม่สำเร็จ");
+      }
+    });
+  };
+  return <><div className="heading"><div><small>TASKS</small><h1>{project.name}</h1><p>จัดลำดับความเร่งและติดตามงานทั้งหมด</p></div><Link className="view-board" href="/board">ดูแบบ Board</Link></div><section className="panel feature-panel"><div className="checklist">{tasks.map(task => <div className="task" key={task.id}><input aria-label={`ทำเครื่องหมาย ${task.title}`} type="checkbox" checked={task.status === "done"} onChange={() => toggle(task)} /><span className={task.status === "done" ? "strike" : ""}>{task.title}</span><Select className={`task-priority-select ${priorityClass(task.priority)}`} aria-label={`ความสำคัญของ ${task.title}`} value={priorityLabel(task.priority)} onChange={event => changePriority(task, event.target.value)}><option>ทั่วไป</option><option>สำคัญ</option><option>สำคัญมาก</option></Select></div>)}{!tasks.length && <p className="empty-copy">ยังไม่มี task</p>}{error && <p className="form-error" role="alert">{error}</p>}<form className="task-form" onSubmit={add}><Input aria-label="ชื่อ task" value={title} onChange={event => setTitle(event.target.value)} placeholder="เพิ่ม task…" required /><Select aria-label="ความเร่ง" value={priority} onChange={event => setPriority(event.target.value)}><option>ทั่วไป</option><option>สำคัญ</option><option>สำคัญมาก</option></Select><Button variant="primary" loading={pending}>เพิ่มงาน</Button></form></div></section></>;
 }
 
 function noteText(content: Note["content"]) { return typeof content === "string" ? content : JSON.stringify(content, null, 2); }
@@ -96,6 +110,7 @@ export function ConnectedNotes({ project, initial }: { project: Project; initial
   const selected = notes.find(note => note.id === selectedId);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const toast = useToast();
   const snapshot = selected ? `${selected.title}\n${noteText(selected.content)}` : "";
   const dirty = Boolean(selected && savedSnapshots[selected.id] !== snapshot);
@@ -130,19 +145,48 @@ export function ConnectedNotes({ project, initial }: { project: Project; initial
     if (target === "__new__") window.setTimeout(create, 0); else setSelectedId(target);
   };
   const patch = (input: { title?: string; content?: string }) => { if (selected) setNotes(current => current.map(note => note.id === selected.id ? { ...note, ...input } : note)); };
-  const save = () => {
-    if (!selected || !selected.title.trim()) return;
+  const save = useCallback((notify = true) => {
+    if (!selected || !selected.title.trim() || pending) return;
+    const savingSnapshot = `${selected.title}\n${noteText(selected.content)}`;
     setError("");
     startTransition(async () => {
       try {
         const updated = await updateNote(selected.id, { title: selected.title, content: noteText(selected.content) });
-        setNotes(current => current.map(note => note.id === updated.id ? updated : note));
+        setNotes(current => current.map(note => {
+          if (note.id !== updated.id) return note;
+          const currentSnapshot = `${note.title}\n${noteText(note.content)}`;
+          return currentSnapshot === savingSnapshot ? updated : { ...updated, title: note.title, content: note.content };
+        }));
         setSavedSnapshots(current => ({ ...current, [updated.id]: `${updated.title}\n${noteText(updated.content)}` }));
-        toast("บันทึกโน้ตแล้ว");
+        if (notify) toast("บันทึกโน้ตแล้ว");
       } catch (cause) { setError(cause instanceof Error ? cause.message : "บันทึกโน้ตไม่สำเร็จ"); }
     });
+  }, [pending, selected, setError, setNotes, setSavedSnapshots, startTransition, toast]);
+  useEffect(() => {
+    if (!dirty || pending || !selected?.title.trim()) return;
+    const timer = window.setTimeout(() => save(false), 1000);
+    return () => window.clearTimeout(timer);
+  }, [dirty, pending, save, selected?.title]);
+  const saveShortcut = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      if (dirty) save();
+    }
   };
-  return <><div className="heading"><div><small>NOTES</small><h1>{project.name}</h1><p>พื้นที่เขียนที่เชื่อมต่อ Supabase และบันทึกเฉพาะบัญชีนี้</p></div><Button type="button" variant="primary" onClick={create} loading={pending}>+ New note</Button></div>{error && <p className="form-error" role="alert">{error}</p>}<div className={`notes-grid connected-notes ${selected ? "has-selection" : ""}`}><aside className="panel note-list"><div className="note-list-header"><h2>โน้ตทั้งหมด</h2><Badge tone="neutral">{notes.length}</Badge></div><div className="note-list-items">{notes.map(note => <Button variant="ghost" className={`note-item ${note.id === selectedId ? "active" : ""}`} key={note.id} onClick={() => choose(note.id)}><b>{note.title || "ไม่มีชื่อ"}</b><small>{new Date(note.created_at).toLocaleDateString("th-TH")}</small></Button>)}{!notes.length && <EmptyState title="ยังไม่มีโน้ต" description="สร้างโน้ตแรกเพื่อเก็บบริบทของโปรเจกต์" />}</div></aside><section className="note-editor-shell">{selected ? <><div className="note-editor-header"><Button className="note-mobile-back" variant="ghost" size="sm" aria-label="กลับไปรายการโน้ต" onClick={() => choose("")}>←</Button><Input className="note-title-input" aria-label="ชื่อ note" value={selected.title} onChange={event => patch({ title: event.target.value })} required /><span className={`save-state ${pending ? "" : dirty ? "dirty" : "saved"}`} aria-live="polite">{pending ? "กำลังบันทึก…" : dirty ? "● ยังไม่ได้บันทึก" : "✓ อัปเดตแล้ว"}</span><Button className="note-save-button" onClick={save} loading={pending} disabled={!dirty || !selected.title.trim()}>บันทึก</Button></div><Textarea aria-label="เนื้อหา note" className="note-editor-textarea" value={noteText(selected.content)} onChange={event => patch({ content: event.target.value })} placeholder="เริ่มเขียนบริบท แนวคิด หรือรายละเอียดทางเทคนิค…" /></> : <div className="empty-editor"><EmptyState title="เลือกโน้ตเพื่อเริ่มเขียน" description="หรือสร้างโน้ตใหม่สำหรับโปรเจกต์นี้" action={<Button variant="primary" onClick={create}>สร้างโน้ต</Button>} /></div>}</section></div><Modal open={confirmSwitch} onClose={() => setConfirmSwitch(false)} title="ยังไม่ได้บันทึกการแก้ไข" description="หากเปลี่ยนโน้ตตอนนี้ การแก้ไขล่าสุดจะหายไป" footer={<><Button onClick={() => setConfirmSwitch(false)}>เขียนต่อ</Button><Button variant="danger" onClick={discardAndSwitch}>ละทิ้งและเปลี่ยน</Button></>}><p>บันทึกโน้ตนี้ก่อนเพื่อเก็บการเปลี่ยนแปลงอย่างปลอดภัย</p></Modal></>;
+  const editorKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    saveShortcut(event);
+    if (event.key !== "Tab" || event.ctrlKey || event.metaKey || event.altKey) return;
+    event.preventDefault();
+    const start = event.currentTarget.selectionStart;
+    const end = event.currentTarget.selectionEnd;
+    const content = noteText(selected?.content ?? "");
+    patch({ content: `${content.slice(0, start)}\t${content.slice(end)}` });
+    window.requestAnimationFrame(() => {
+      editorRef.current?.focus();
+      editorRef.current?.setSelectionRange(start + 1, start + 1);
+    });
+  };
+  return <><div className="heading"><div><small>NOTES</small><h1>{project.name}</h1><p>บันทึกอัตโนมัติหลังหยุดพิมพ์ และสั่งบันทึกทันทีด้วย Ctrl/Cmd + S</p></div><Button type="button" variant="primary" onClick={create} loading={pending}>+ New note</Button></div>{error && <p className="form-error" role="alert">{error}</p>}<div className={`notes-grid connected-notes ${selected ? "has-selection" : ""}`}><aside className="panel note-list"><div className="note-list-header"><h2>โน้ตทั้งหมด</h2><Badge tone="neutral">{notes.length}</Badge></div><div className="note-list-items">{notes.map(note => <Button variant="ghost" className={`note-item ${note.id === selectedId ? "active" : ""}`} key={note.id} onClick={() => choose(note.id)}><b>{note.title || "ไม่มีชื่อ"}</b><small>{new Date(note.created_at).toLocaleDateString("th-TH")}</small></Button>)}{!notes.length && <EmptyState title="ยังไม่มีโน้ต" description="สร้างโน้ตแรกเพื่อเก็บบริบทของโปรเจกต์" />}</div></aside><section className="note-editor-shell">{selected ? <><div className="note-editor-header"><Button className="note-mobile-back" variant="ghost" size="sm" aria-label="กลับไปรายการโน้ต" onClick={() => choose("")}>←</Button><Input className="note-title-input" aria-label="ชื่อ note" value={selected.title} onChange={event => patch({ title: event.target.value })} onKeyDown={saveShortcut} required /><span className={`save-state ${pending ? "" : dirty ? "dirty" : "saved"}`} aria-live="polite">{pending ? "กำลังบันทึก…" : dirty ? "● รอบันทึกอัตโนมัติ" : "✓ อัปเดตแล้ว"}</span><Button className="note-save-button" onClick={() => save()} loading={pending} disabled={!dirty || !selected.title.trim()}>บันทึก</Button></div><Textarea ref={editorRef} aria-label="เนื้อหา note" className="note-editor-textarea" value={noteText(selected.content)} onChange={event => patch({ content: event.target.value })} onKeyDown={editorKeyDown} placeholder="เริ่มเขียนบริบท แนวคิด หรือรายละเอียดทางเทคนิค…" /></> : <div className="empty-editor"><EmptyState title="เลือกโน้ตเพื่อเริ่มเขียน" description="หรือสร้างโน้ตใหม่สำหรับโปรเจกต์นี้" action={<Button variant="primary" onClick={create}>สร้างโน้ต</Button>} /></div>}</section></div><Modal open={confirmSwitch} onClose={() => setConfirmSwitch(false)} title="ยังไม่ได้บันทึกการแก้ไข" description="หากเปลี่ยนโน้ตตอนนี้ การแก้ไขล่าสุดจะหายไป" footer={<><Button onClick={() => setConfirmSwitch(false)}>เขียนต่อ</Button><Button variant="danger" onClick={discardAndSwitch}>ละทิ้งและเปลี่ยน</Button></>}><p>บันทึกโน้ตนี้ก่อนเพื่อเก็บการเปลี่ยนแปลงอย่างปลอดภัย</p></Modal></>;
 }
 
 export function ConnectedActivity({ project, activities }: { project: Project; activities: Activity[] }) {
@@ -172,5 +216,6 @@ export function ConnectedBoard({ project, initial }: { project: Project; initial
       }
     });
   };
-  return <><div className="heading"><div><small>BOARD</small><h1>{project.name}</h1><p>ลากการ์ดเพื่อเปลี่ยนสถานะ งานจะถูกบันทึกอัตโนมัติ</p></div><Link className="view-board" href="/checklists">ดูแบบรายการ</Link></div>{error && <p className="form-error board-error" role="alert">{error}</p>}<div className="kanban">{statuses.map(status => <section className={over === status ? "drop-active" : ""} key={status} onDragOver={event => { event.preventDefault(); setOver(status); }} onDragLeave={() => setOver("")} onDrop={event => { event.preventDefault(); move(event.dataTransfer.getData("text/plain"), status); setDragging(""); setOver(""); }}><div className="column-title"><h2>{labels[status]}</h2><span>{tasks.filter(task => task.status === status).length}</span></div>{tasks.filter(task => task.status === status).map(task => <article className={dragging === task.id ? "dragging" : ""} draggable key={task.id} onDragStart={event => { event.dataTransfer.setData("text/plain", task.id); setDragging(task.id); }} onDragEnd={() => { setDragging(""); setOver(""); }}><small className={`priority ${priorityClass(task.priority)}`}>{priorityLabel(task.priority)}</small><b>{task.title}</b><span>{task.description || "ไม่มีรายละเอียด"}</span><Select aria-label={`ย้าย ${task.title}`} value={task.status} onChange={event => move(task.id, event.target.value)}><option value="todo">รอทำ</option><option value="in_progress">กำลังทำ</option><option value="review">ตรวจสอบ</option><option value="done">เสร็จแล้ว</option></Select></article>)}</section>)}</div></>;
+  const cardColor = (id: string) => [...id].reduce((total, character) => total + character.charCodeAt(0), 0) % 5;
+  return <><div className="heading"><div><small>BOARD</small><h1>{project.name}</h1><p>ลากการ์ดเพื่อเปลี่ยนสถานะ งานจะถูกบันทึกอัตโนมัติ</p></div><Link className="view-board" href="/checklists">ดูแบบรายการ</Link></div>{error && <p className="form-error board-error" role="alert">{error}</p>}<div className="kanban">{statuses.map(status => <section className={over === status ? "drop-active" : ""} key={status} onDragOver={event => { event.preventDefault(); setOver(status); }} onDragLeave={() => setOver("")} onDrop={event => { event.preventDefault(); move(event.dataTransfer.getData("text/plain"), status); setDragging(""); setOver(""); }}><div className="column-title"><h2>{labels[status]}</h2><span>{tasks.filter(task => task.status === status).length}</span></div>{tasks.filter(task => task.status === status).map(task => <article className={`board-card board-card-color-${cardColor(task.id)} ${dragging === task.id ? "dragging" : ""}`} draggable key={task.id} onDragStart={event => { event.dataTransfer.setData("text/plain", task.id); setDragging(task.id); }} onDragEnd={() => { setDragging(""); setOver(""); }}><div className="board-card-head"><small className={`priority ${priorityClass(task.priority)}`}>{priorityLabel(task.priority)}</small><span className="board-card-grip" aria-hidden="true">⠿</span></div><b>{task.title}</b>{task.description && <span className="board-card-description">{task.description}</span>}<Select aria-label={`ย้าย ${task.title}`} value={task.status} onChange={event => move(task.id, event.target.value)}><option value="todo">รอทำ</option><option value="in_progress">กำลังทำ</option><option value="review">ตรวจสอบ</option><option value="done">เสร็จแล้ว</option></Select></article>)}</section>)}</div></>;
 }

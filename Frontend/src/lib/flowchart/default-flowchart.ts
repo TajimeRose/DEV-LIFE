@@ -12,13 +12,12 @@ export const defaultNodes: FlowNode[] = [
   { id: "end-no-1", type: "end", position: { x: 600, y: 520 }, data: { label: "End", description: "จุดสิ้นสุดเมื่อเงื่อนไขเป็นเท็จ" } },
 ];
 export const defaultEdges: FlowEdge[] = [
-  { id: "edge-start-process", source: "start-1", target: "process-1", type: "smoothstep", animated: false },
-  { id: "edge-process-decision", source: "process-1", target: "decision-1", type: "smoothstep", animated: false },
-  { id: "edge-decision-yes", source: "decision-1", target: "process-yes-1", sourceHandle: "yes", type: "smoothstep", label: "Yes" },
-  { id: "edge-process-yes-end", source: "process-yes-1", target: "end-yes-1", type: "smoothstep" },
-  { id: "edge-decision-no", source: "decision-1", target: "end-no-1", sourceHandle: "no", type: "smoothstep", label: "No" },
+  { id: "edge-start-process", source: "start-1", target: "process-1", sourceHandle: "bottom", targetHandle: "top", type: "smoothstep", animated: false },
+  { id: "edge-process-decision", source: "process-1", target: "decision-1", sourceHandle: "bottom", targetHandle: "top", type: "smoothstep", animated: false },
+  { id: "edge-decision-yes", source: "decision-1", target: "process-yes-1", sourceHandle: "left", targetHandle: "top", type: "smoothstep", label: "Yes" },
+  { id: "edge-process-yes-end", source: "process-yes-1", target: "end-yes-1", sourceHandle: "bottom", targetHandle: "top", type: "smoothstep" },
+  { id: "edge-decision-no", source: "decision-1", target: "end-no-1", sourceHandle: "right", targetHandle: "top", type: "smoothstep", label: "No" },
 ];
 export const defaultViewport: FlowViewport = { x: 0, y: 0, zoom: 1 };
 export const freshDefaultNodes = () => defaultNodes.map(node => ({ ...node, position: { ...node.position }, data: { ...node.data } }));
 export const freshDefaultEdges = () => defaultEdges.map(edge => ({ ...edge }));
-

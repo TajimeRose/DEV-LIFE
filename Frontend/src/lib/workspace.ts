@@ -8,10 +8,10 @@ export const navigation: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: "⌂", group: "Workspace" },
   { href: "/notes", label: "Notes", icon: "N", group: "Workspace" },
   { href: "/checklists", label: "Tasks", icon: "✓", group: "Workspace" },
-  { href: "/activity", label: "Activity", icon: "↻", group: "Workspace" },
-  { href: "/board", label: "Board", icon: "▦", group: "Tools" },
   { href: "/flowchart", label: "Flowcharts", icon: "◇", group: "Workspace" },
+  { href: "/board", label: "Board", icon: "▦", group: "Tools" },
   { href: "/settings", label: "Settings", icon: "⚙", group: "Tools" },
+  { href: "/activity", label: "Activity", icon: "↻", group: "Tools" },
 ];
 
 export const initialTasks: Task[] = [

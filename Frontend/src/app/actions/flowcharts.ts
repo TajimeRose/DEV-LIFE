@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { defaultEdges, defaultNodes, defaultViewport } from "@/lib/flowchart/default-flowchart";
+import { defaultViewport } from "@/lib/flowchart/default-flowchart";
 
 const uuid = z.uuid();
 const nameSchema = z.string().trim().min(1).max(200);
@@ -31,11 +31,22 @@ export async function createFlowchart(_state: FlowchartFormState, formData: Form
   const descriptionResult = descriptionSchema.safeParse(formData.get("description") ?? "");
   if (!projectResult.success || !nameResult.success || !descriptionResult.success) return { error: "กรุณาตรวจสอบชื่อและรายละเอียด Flowchart" };
   const { supabase, user, projectId } = await context(projectResult.data);
-  const newFlowchart = { id: crypto.randomUUID(), user_id: user.id, project_id: projectId, name: nameResult.data, description: descriptionResult.data || null, nodes: defaultNodes, edges: defaultEdges, viewport: defaultViewport };
+  const newFlowchart = { id: crypto.randomUUID(), user_id: user.id, project_id: projectId, name: nameResult.data, description: descriptionResult.data || null, nodes: [], edges: [], viewport: defaultViewport };
   const { data, error } = await supabase.from("flowcharts").insert(newFlowchart).select().single();
   if (error) return { error: error.message };
   await logActivity(supabase, user.id, projectId, "created", data.id, data.name);
   redirect(`/projects/${projectId}/flowcharts/${data.id}`);
+}
+
+export async function createFlowchartInline(projectInput: string, nameInput: string, descriptionInput: string) {
+  const projectId = uuid.parse(projectInput), name = nameSchema.parse(nameInput), description = descriptionSchema.parse(descriptionInput);
+  const { supabase, user } = await context(projectId);
+  const record = { id: crypto.randomUUID(), user_id: user.id, project_id: projectId, name, description: description || null, nodes: [], edges: [], viewport: defaultViewport };
+  const { data, error } = await supabase.from("flowcharts").insert(record).select().single();
+  if (error) throw new Error(error.message);
+  await logActivity(supabase, user.id, projectId, "created", data.id, data.name);
+  revalidatePath(`/projects/${projectId}/flowcharts`);
+  return data;
 }
 
 export async function renameFlowchart(projectId: string, flowchartId: string, name: string) {
@@ -74,4 +85,3 @@ export async function logFlowchartReset(projectId: string, flowchartId: string, 
   const { supabase, user } = await context(projectId);
   await logActivity(supabase, user.id, projectId, "reset", uuid.parse(flowchartId), nameSchema.parse(name));
 }
-
