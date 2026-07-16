@@ -1,3 +1,4 @@
-import { Flowchart } from "@/components/features";
+import { redirect } from "next/navigation";
+import { getCurrentWorkspace } from "@/lib/current-workspace";
 
-export default function Page() { return <Flowchart />; }
+export default async function Page() { const { project } = await getCurrentWorkspace(); redirect(`/projects/${project!.id}/flowcharts`); }
