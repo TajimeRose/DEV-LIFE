@@ -1,11 +1,16 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+
+export const ACTIVE_PROJECT_COOKIE = "devlife-active-project";
 
 export const getCurrentWorkspace = cache(async () => {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return { supabase, user: null, project: null };
-  const { data: project, error } = await supabase.from("projects").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const projectId = (await cookies()).get(ACTIVE_PROJECT_COOKIE)?.value;
+  if (!projectId) return { supabase, user, project: null };
+  const { data: project, error } = await supabase.from("projects").select("*").eq("id", projectId).eq("user_id", user.id).maybeSingle();
   if (error) throw new Error(error.message);
   return { supabase, user, project };
 });

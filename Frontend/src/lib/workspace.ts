@@ -10,6 +10,7 @@ export const navigation: NavItem[] = [
   { href: "/checklists", label: "Tasks", icon: "✓", group: "Workspace" },
   { href: "/activity", label: "Activity", icon: "↻", group: "Workspace" },
   { href: "/board", label: "Board", icon: "▦", group: "Tools" },
+  { href: "/settings", label: "Settings", icon: "⚙", group: "Tools" },
 ];
 
 export const initialTasks: Task[] = [

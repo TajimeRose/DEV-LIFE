@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { login } from "@/app/auth/actions";
@@ -24,7 +25,7 @@ export default function LoginPage() {
     <main className="auth-shell">
       <section className="auth-story">
         <div className="auth-brand">
-          <span>DL</span>
+          <Image src="/Logo.png" alt="Dev Life" width={42} height={42} priority />
           <b>DEV LIFE</b>
         </div>
         <div className="auth-message">
@@ -41,7 +42,7 @@ export default function LoginPage() {
 
       <section className="auth-entry">
         <Card className="auth-card">
-          <div className="auth-mobile-brand"><span>DL</span><b>DEV LIFE</b></div>
+          <div className="auth-mobile-brand"><Image src="/Logo.png" alt="Dev Life" width={42} height={42} priority /><b>DEV LIFE</b></div>
           <small className="auth-eyebrow">WELCOME BACK</small>
           <h2>เข้าสู่ระบบ</h2>
           <p className="auth-description">กรอกข้อมูลเพื่อกลับเข้าสู่ DEV LIFE workspace ของคุณ</p>

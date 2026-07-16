@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { register } from "@/app/auth/actions";
@@ -23,7 +24,7 @@ export default function RegisterPage() {
   return (
     <main className="auth-shell">
       <section className="auth-story">
-        <div className="auth-brand"><span>DL</span><b>DEV LIFE</b></div>
+        <div className="auth-brand"><Image src="/Logo.png" alt="Dev Life" width={42} height={42} priority /><b>DEV LIFE</b></div>
         <div className="auth-message">
           <small>START YOUR WORKSPACE</small>
           <h1>เปลี่ยนไอเดีย ให้กลายเป็นงานที่ชัดเจน</h1>
@@ -38,7 +39,7 @@ export default function RegisterPage() {
 
       <section className="auth-entry">
         <Card className="auth-card">
-          <div className="auth-mobile-brand"><span>DL</span><b>DEV LIFE</b></div>
+          <div className="auth-mobile-brand"><Image src="/Logo.png" alt="Dev Life" width={42} height={42} priority /><b>DEV LIFE</b></div>
           <small className="auth-eyebrow">CREATE ACCOUNT</small>
           <h2>สมัครสมาชิก</h2>
           <p className="auth-description">สร้างบัญชีเพื่อเริ่มต้น DEV LIFE workspace ของคุณ</p>
