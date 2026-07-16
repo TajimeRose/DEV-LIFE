@@ -1,9 +1,23 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["10.211.79.234", "10.77.65.234"],
   turbopack: {
-    root: __dirname,
+    root: path.resolve(__dirname),
+  },
+
+  allowedDevOrigins: [
+    "10.117.153.234",
+    "10.117.153.234:3000",
+  ],
+
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        "10.117.153.234",
+        "10.117.153.234:3000",
+      ],
+    },
   },
 };
 

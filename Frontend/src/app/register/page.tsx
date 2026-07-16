@@ -4,15 +4,16 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { register } from "@/app/auth/actions";
+import { Button, Card, FormField, Input } from "@/components/ui";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <button className="auth-submit" type="submit" disabled={pending}>
+    <Button className="auth-submit" variant="primary" type="submit" loading={pending}>
       <span>{pending ? "กำลังสร้างบัญชี..." : "สร้างบัญชี"}</span>
       {!pending && <span aria-hidden="true">→</span>}
-    </button>
+    </Button>
   );
 }
 
@@ -36,7 +37,7 @@ export default function RegisterPage() {
       </section>
 
       <section className="auth-entry">
-        <div className="auth-card">
+        <Card className="auth-card">
           <div className="auth-mobile-brand"><span>DL</span><b>DEV LIFE</b></div>
           <small className="auth-eyebrow">CREATE ACCOUNT</small>
           <h2>สมัครสมาชิก</h2>
@@ -44,16 +45,13 @@ export default function RegisterPage() {
           <form className="auth-form" action={formAction}>
             {state?.error && <p className="auth-error" role="alert">{state.error}</p>}
             {state?.success && <p className="auth-success" role="status">{state.success}</p>}
-            <label htmlFor="email">อีเมล</label>
-            <div className="auth-control"><span aria-hidden="true">@</span><input id="email" name="email" type="email" autoComplete="email" placeholder="name@example.com" required /></div>
-            <div className="auth-label-row"><label htmlFor="password">รหัสผ่าน</label><small>อย่างน้อย 6 ตัวอักษร</small></div>
-            <div className="auth-control"><span aria-hidden="true">••</span><input id="password" name="password" type="password" autoComplete="new-password" placeholder="สร้างรหัสผ่าน" minLength={6} required /></div>
-            <div className="auth-label-row"><label htmlFor="confirmPassword">ยืนยันรหัสผ่าน</label></div>
-            <div className="auth-control"><span aria-hidden="true">••</span><input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" placeholder="กรอกรหัสผ่านอีกครั้ง" minLength={6} required /></div>
+            <FormField label="อีเมล"><Input name="email" type="email" autoComplete="email" placeholder="name@example.com" required /></FormField>
+            <FormField label="รหัสผ่าน" hint="อย่างน้อย 6 ตัวอักษร"><Input name="password" type="password" autoComplete="new-password" placeholder="สร้างรหัสผ่าน" minLength={6} required /></FormField>
+            <FormField label="ยืนยันรหัสผ่าน"><Input name="confirmPassword" type="password" autoComplete="new-password" placeholder="กรอกรหัสผ่านอีกครั้ง" minLength={6} required /></FormField>
             <SubmitButton />
           </form>
           <p className="auth-switch">มีบัญชีอยู่แล้ว? <Link href="/login">เข้าสู่ระบบ</Link></p>
-        </div>
+        </Card>
         <p className="auth-copyright">© 2026 DEV LIFE · Developer productivity workspace</p>
       </section>
     </main>

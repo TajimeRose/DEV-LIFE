@@ -14,15 +14,18 @@ type WorkspaceSelection = {
   tasks?: boolean;
   notes?: boolean;
   activities?: boolean;
+  activityLimit?: number;
 };
 
 export async function getProjectWorkspace(selection: WorkspaceSelection = {}) {
   const { supabase, project } = await getCurrentWorkspace();
   if (!project) return { project: null, tasks: [], notes: [], activities: [] };
+  let activityQuery = supabase.from("activities").select("*").eq("project_id", project.id).order("created_at", { ascending: false });
+  if (selection.activityLimit) activityQuery = activityQuery.limit(selection.activityLimit);
   const [taskResult, noteResult, activityResult] = await Promise.all([
     selection.tasks ? supabase.from("tasks").select("*").eq("project_id", project.id).order("created_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
     selection.notes ? supabase.from("notes").select("*").eq("project_id", project.id).order("created_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
-    selection.activities ? supabase.from("activities").select("*").eq("project_id", project.id).order("created_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
+    selection.activities ? activityQuery : Promise.resolve({ data: [], error: null }),
   ]);
   const error = taskResult.error || noteResult.error || activityResult.error;
   if (error) throw new Error(error.message);
