@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { safeAuthRedirect } from "@/lib/auth/redirect";
+import { githubOAuthScopes } from "@/lib/github/config";
+import { clearGitHubToken } from "@/lib/github/token-vault";
 import { createClient } from "@/lib/supabase/server";
 
 const credentials = z.object({ email: z.email(), password: z.string().min(6) });
@@ -14,9 +17,11 @@ export type RegisterState = { error?: string; success?: string } | null;
 export type ProfileState = { error?: string; success?: string } | null;
 export type GitHubAuthState = { error: string } | null;
 
-function callbackUrl() {
+function callbackUrl(next = "/projects") {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  return `${siteUrl.replace(/\/$/, "")}/auth/callback`;
+  const url = new URL("/auth/callback", `${siteUrl.replace(/\/$/, "")}/`);
+  url.searchParams.set("next", safeAuthRedirect(next));
+  return url.toString();
 }
 
 export async function login(_state: LoginState, formData: FormData): Promise<LoginState> {
@@ -41,14 +46,38 @@ export async function register(_state: RegisterState, formData: FormData): Promi
   return { success: "สมัครสมาชิกสำเร็จ กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชีก่อนเข้าสู่ระบบ" };
 }
 
-export async function signInWithGitHub(_state: GitHubAuthState): Promise<GitHubAuthState> {
-  void _state;
+async function startGitHubOAuth(next: "/projects" | "/settings/integrations") {
+  const scopes = githubOAuthScopes();
   const { data, error } = await (await createClient()).auth.signInWithOAuth({
     provider: "github",
-    options: { redirectTo: callbackUrl() },
+    options: {
+      redirectTo: callbackUrl(next),
+      queryParams: { prompt: "select_account" },
+      ...(scopes ? { scopes } : {}),
+    },
   });
-  if (error || !data.url) return { error: "ไม่สามารถเชื่อมต่อ GitHub ได้ กรุณาลองใหม่อีกครั้ง" };
+  if (error || !data.url) return null;
   redirect(data.url);
+}
+
+export async function signInWithGitHub(_state: GitHubAuthState): Promise<GitHubAuthState> {
+  void _state;
+  const result = await startGitHubOAuth("/projects");
+  if (result === null) return { error: "ไม่สามารถเชื่อมต่อ GitHub ได้ กรุณาลองใหม่อีกครั้ง" };
+  return null;
+}
+
+export async function connectGitHub() {
+  const result = await startGitHubOAuth("/settings/integrations");
+  if (result === null) redirect("/settings/integrations?github=error");
+}
+
+export async function disconnectGitHub() {
+  const { data, error } = await (await createClient()).auth.getClaims();
+  if (error || !data?.claims.sub) redirect("/login");
+  await clearGitHubToken();
+  revalidatePath("/settings/integrations");
+  redirect("/settings/integrations?github=disconnected");
 }
 
 export async function updateProfile(_state: ProfileState, formData: FormData): Promise<ProfileState> {
@@ -64,6 +93,7 @@ export async function updateProfile(_state: ProfileState, formData: FormData): P
 }
 
 export async function logout() {
+  await clearGitHubToken();
   const { error } = await (await createClient()).auth.signOut();
   if (error) throw new Error(error.message);
   redirect("/login");

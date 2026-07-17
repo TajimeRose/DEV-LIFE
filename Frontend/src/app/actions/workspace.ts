@@ -12,9 +12,9 @@ const projectName = z.string().trim().min(1).max(200);
 
 async function authenticated() {
   const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) redirect("/login");
-  return { supabase, user };
+  const { data, error } = await supabase.auth.getClaims();
+  if (error || !data?.claims.sub) redirect("/login");
+  return { supabase, user: { id: data.claims.sub } };
 }
 
 async function activate(id: string) {

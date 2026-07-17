@@ -1,3 +1,5 @@
-import { Github } from "@/components/features";
+import { redirect } from "next/navigation";
 
-export default function Page() { return <Github />; }
+export default function Page() {
+  redirect("/settings/integrations");
+}

@@ -12,7 +12,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --no-warnings --test --experimental-test-isolation=none src/lib/proxy-matcher.test.ts"
+    "test": "node --no-warnings --test --experimental-test-isolation=none src/lib/proxy-matcher.test.ts src/lib/auth/*.test.ts src/lib/github/*.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.0",

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { addEdge, Background, BackgroundVariant, ConnectionLineType, ConnectionMode, Controls, MarkerType, MiniMap, ReactFlow, ReactFlowProvider, reconnectEdge, useEdgesState, useNodesState, type Connection, type NodeTypes } from "@xyflow/react";
 import { logFlowchartReset, renameFlowchart } from "@/app/actions/flowcharts";
-import { Button, FormField, Input, Modal, Textarea } from "@/components/ui";
+import { Button, FormField, Input, Modal, Textarea, useToast } from "@/components/ui";
 import { autoLayout } from "@/lib/flowchart/flowchart-layout";
 import { defaultLabels, defaultViewport, freshDefaultEdges, freshDefaultNodes, nodeDescriptions } from "@/lib/flowchart/default-flowchart";
 import { saveFlowchart } from "@/lib/flowchart/flowchart-service";
@@ -24,16 +24,43 @@ import { ConnectorNode } from "./nodes/ConnectorNode";
 const nodeTypes: NodeTypes = { start: StartNode, end: EndNode, process: ProcessNode, decision: DecisionNode, inputOutput: InputOutputNode, document: DocumentNode, database: DatabaseNode, connector: ConnectorNode };
 type Snapshot = { nodes: FlowNode[]; edges: FlowEdge[] };
 const clientId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+const decisionHandleAliases: Record<string, string> = {
+  yes: "left",
+  no: "right",
+  "top-left": "top",
+  top: "top",
+  "left-top": "top",
+  "top-right": "right",
+  "right-top": "right",
+  right: "right",
+  "right-bottom": "bottom",
+  "bottom-right": "bottom",
+  bottom: "bottom",
+  "bottom-left": "left",
+  "left-bottom": "left",
+  left: "left",
+};
+
+function normalizeDecisionHandles(nodes: FlowNode[], edges: FlowEdge[]) {
+  const decisions = new Set(nodes.filter(node => node.type === "decision").map(node => node.id));
+  return edges.map(edge => ({
+    ...edge,
+    sourceHandle: decisions.has(edge.source) && edge.sourceHandle ? decisionHandleAliases[edge.sourceHandle] ?? edge.sourceHandle : edge.sourceHandle,
+    targetHandle: decisions.has(edge.target) && edge.targetHandle ? decisionHandleAliases[edge.targetHandle] ?? edge.targetHandle : edge.targetHandle,
+  }));
+}
 
 function Editor({ flowchart, embedded = false, onClose }: { flowchart: FlowchartRecord; embedded?: boolean; onClose?: () => void }) {
-  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(flowchart.nodes ?? []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>((flowchart.edges ?? []).map(edge => edge.sourceHandle === "yes" ? { ...edge, sourceHandle: "left" } : edge.sourceHandle === "no" ? { ...edge, sourceHandle: "right" } : edge));
+  const initialNodes = flowchart.nodes ?? [];
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>(normalizeDecisionHandles(initialNodes, flowchart.edges ?? []));
   const [viewport, setViewport] = useState<FlowViewport>(flowchart.viewport ?? defaultViewport);
   const [name, setName] = useState(flowchart.name);
   const [description, setDescription] = useState(flowchart.description ?? "");
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [editingId, setEditingId] = useState<string>();
   const [editValue, setEditValue] = useState("");
+  const toast = useToast();
   const ready = useRef(false), savedName = useRef(flowchart.name), history = useRef<Snapshot[]>([]), future = useRef<Snapshot[]>([]);
   const selectedNode = nodes.find(node => node.selected);
   const selectedEdge = edges.find(edge => edge.selected);
@@ -49,7 +76,16 @@ function Editor({ flowchart, embedded = false, onClose }: { flowchart: Flowchart
   const updateNode = useCallback((id: string, data: FlowNode["data"]) => setNodes(current => current.map(node => node.id === id ? { ...node, data } : node)), [setNodes]);
   const updateEdge = useCallback((id: string, patch: Partial<FlowEdge>) => setEdges(current => current.map(edge => edge.id === id ? { ...edge, ...patch } : edge)), [setEdges]);
   const clearSelection = useCallback(() => { setNodes(current => current.map(node => ({ ...node, selected: false }))); setEdges(current => current.map(edge => ({ ...edge, selected: false }))); }, [setEdges, setNodes]);
-  const removeSelected = useCallback(() => { const selected = nodes.filter(node => node.selected); const important = selected.some(node => node.type === "start" || node.type === "end"); if (important && !window.confirm("Node เริ่มต้นหรือสิ้นสุดมีความสำคัญ ยืนยันการลบหรือไม่?")) return; snapshot(); const ids = new Set(selected.map(node => node.id)); setNodes(current => current.filter(node => !node.selected)); setEdges(current => current.filter(edge => !edge.selected && !ids.has(edge.source) && !ids.has(edge.target))); }, [nodes, setEdges, setNodes, snapshot]);
+  const removeSelected = useCallback(() => {
+    const selected = nodes.filter(node => node.selected);
+    const selectedEdges = edges.filter(edge => edge.selected);
+    if (!selected.length && !selectedEdges.length) return;
+    snapshot();
+    const ids = new Set(selected.map(node => node.id));
+    setNodes(current => current.filter(node => !node.selected));
+    setEdges(current => current.filter(edge => !edge.selected && !ids.has(edge.source) && !ids.has(edge.target)));
+    toast(`${selected.length ? `ลบ ${selected.length} บล็อกแล้ว` : "ลบเส้นเชื่อมแล้ว"} · กด Ctrl/⌘ + Z เพื่อย้อนกลับ`);
+  }, [edges, nodes, setEdges, setNodes, snapshot, toast]);
   const duplicateSelected = useCallback(() => { if (!selectedNode) return; snapshot(); setNodes(current => [...current, { ...selectedNode, id: `${selectedNode.type}-${clientId()}`, selected: false, position: { x: selectedNode.position.x + 40, y: selectedNode.position.y + 40 }, data: { ...selectedNode.data, label: `${selectedNode.data.label} Copy` } }]); }, [selectedNode, setNodes, snapshot]);
   const undo = useCallback(() => { const previous = history.current.pop(); if (!previous) return; future.current.push({ nodes: structuredClone(nodes), edges: structuredClone(edges) }); setNodes(previous.nodes); setEdges(previous.edges); }, [edges, nodes, setEdges, setNodes]);
   const redo = useCallback(() => { const next = future.current.pop(); if (!next) return; history.current.push({ nodes: structuredClone(nodes), edges: structuredClone(edges) }); setNodes(next.nodes); setEdges(next.edges); }, [edges, nodes, setEdges, setNodes]);
