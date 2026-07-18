@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { ACTIVE_PROJECT_COOKIE } from "@/lib/current-workspace";
+import { authorizeProjectAccess, ProjectAccessError } from "@/lib/projects/authorization";
 
 const projectId = z.uuid();
 const projectName = z.string().trim().min(1).max(200);
@@ -30,9 +31,13 @@ async function activate(id: string) {
 export async function selectProject(formData: FormData) {
   const id = projectId.parse(formData.get("projectId"));
   const { supabase, user } = await authenticated();
-  const { data, error } = await supabase.from("projects").select("id").eq("id", id).eq("user_id", user.id).maybeSingle();
-  if (error || !data) throw new Error("ไม่พบโปรเจกต์นี้");
-  await activate(data.id);
+  try {
+    await authorizeProjectAccess(supabase, user.id, id);
+  } catch (error) {
+    if (error instanceof ProjectAccessError) throw new Error("ไม่พบโปรเจกต์นี้");
+    throw error;
+  }
+  await activate(id);
   redirect("/dashboard");
 }
 

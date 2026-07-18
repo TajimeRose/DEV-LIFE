@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { connectGitHub, disconnectGitHub } from "@/app/auth/actions";
 import { Badge, Button, Card, EmptyState, Input, Modal, Select } from "@/components/ui";
+import { RepositoryList, type ConnectedRepository } from "@/components/github/RepositoryList";
 import type { GitHubErrorCode } from "@/lib/github/repositories-handler";
 import type { GitHubRepository } from "@/lib/github/repository";
 
@@ -29,8 +30,18 @@ function RepositorySkeleton() {
   </div>;
 }
 
-function RepositoryCard({ repository, selected, onSelect }: { repository: GitHubRepository; selected: boolean; onSelect: () => void }) {
-  return <Card as="article" className={`github-repository-card ${selected ? "selected" : ""}`}>
+function GitHubSearchRepositoryCard({
+  repository,
+  connected,
+  connecting,
+  onConnect,
+}: {
+  repository: GitHubRepository;
+  connected: boolean;
+  connecting: boolean;
+  onConnect: () => void;
+}) {
+  return <Card as="article" className={`github-repository-card ${connected ? "selected" : ""}`}>
     <div className="github-repository-head">
       <div>
         <small>{repository.ownerLogin}</small>
@@ -47,15 +58,17 @@ function RepositoryCard({ repository, selected, onSelect }: { repository: GitHub
       <span>★ {repository.stargazersCount}</span>
       <span>⑂ {repository.forksCount}</span>
       <span>Branch: {repository.defaultBranch}</span>
-      <Button size="sm" variant={selected ? "primary" : "secondary"} aria-pressed={selected} onClick={onSelect}>{selected ? "✓ เลือกแล้ว" : "เลือก repository"}</Button>
+      <Button size="sm" variant={connected ? "primary" : "secondary"} loading={connecting} disabled={connected} onClick={onConnect}>{connected ? "✓ Connected" : "Connect to project"}</Button>
     </footer>
   </Card>;
 }
 
 export function GitHubRepositoryBrowser({
+  projectId,
   privateReposEnabled,
   callbackStatus,
 }: {
+  projectId: string;
   privateReposEnabled: boolean;
   callbackStatus?: string;
 }) {
@@ -70,7 +83,10 @@ export function GitHubRepositoryBrowser({
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<ApiError["error"]>();
   const [connected, setConnected] = useState(false);
-  const [selectedId, setSelectedId] = useState<number>();
+  const [connectedIds, setConnectedIds] = useState<Set<number>>(new Set());
+  const [connectingId, setConnectingId] = useState<number>();
+  const [connectionRefresh, setConnectionRefresh] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState<{ tone: "success" | "danger"; message: string }>();
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
   useEffect(() => {
@@ -147,6 +163,38 @@ export function GitHubRepositoryBrowser({
 
   const needsConnection = error?.code === "GITHUB_NOT_CONNECTED";
   const needsReconnect = error?.code === "GITHUB_AUTH_REQUIRED" || error?.code === "GITHUB_PERMISSION_REQUIRED";
+  const connectedLoaded = useCallback((items: ConnectedRepository[]) => {
+    setConnectedIds(new Set(items.map(item => item.github_repository_id)));
+  }, []);
+  const connectRepository = async (repository: GitHubRepository) => {
+    setConnectingId(repository.id);
+    setConnectionStatus(undefined);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/repositories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ githubRepositoryId: repository.id }),
+      });
+      const payload = await response.json() as { error?: { code: string; message: string } };
+      if (!response.ok) {
+        setConnectionStatus({
+          tone: payload.error?.code === "DUPLICATE_REPOSITORY" ? "success" : "danger",
+          message: payload.error?.message ?? "Unable to connect this repository.",
+        });
+        if (payload.error?.code === "DUPLICATE_REPOSITORY") {
+          setConnectedIds(current => new Set(current).add(repository.id));
+        }
+        return;
+      }
+      setConnectedIds(current => new Set(current).add(repository.id));
+      setConnectionStatus({ tone: "success", message: `${repository.fullName} is now shared with this project.` });
+      setConnectionRefresh(value => value + 1);
+    } catch {
+      setConnectionStatus({ tone: "danger", message: "Unable to connect this repository." });
+    } finally {
+      setConnectingId(undefined);
+    }
+  };
 
   return <>
     <header className="github-page-header">
@@ -162,6 +210,8 @@ export function GitHubRepositoryBrowser({
       </div>
     </header>
 
+    <RepositoryList projectId={projectId} refreshKey={connectionRefresh} onLoaded={connectedLoaded} />
+
     <Card className="github-privacy">
       <span aria-hidden="true">◇</span>
       <div>
@@ -174,6 +224,7 @@ export function GitHubRepositoryBrowser({
     {callbackStatus === "configuration_required" && <p className="form-error" role="alert">การเชื่อมต่อสำเร็จ แต่ server ยังไม่ได้ตั้งค่า GitHub token encryption key กรุณาตั้งค่าแล้วเชื่อมต่อใหม่</p>}
     {callbackStatus === "error" && <p className="form-error" role="alert">เชื่อมต่อ GitHub ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>}
     {callbackStatus === "disconnected" && <p className="form-success" role="status">ยกเลิกการเชื่อมต่อ GitHub ใน DEV-LIFE แล้ว</p>}
+    {connectionStatus && <p className={connectionStatus.tone === "success" ? "form-success" : "form-error"} role={connectionStatus.tone === "success" ? "status" : "alert"}>{connectionStatus.message}</p>}
 
     {connected && <Card className="github-filters">
       <label><span>ค้นหา repository</span><Input value={search} maxLength={100} onChange={event => setSearch(event.target.value)} placeholder="ชื่อหรือคำอธิบาย…" /></label>
@@ -186,7 +237,7 @@ export function GitHubRepositoryBrowser({
       {loading && <RepositorySkeleton />}
       {!loading && error && <Card className="github-error"><h2>โหลด GitHub ไม่สำเร็จ</h2><p>{error.message}</p>{needsReconnect && <form action={connectGitHub}><Button variant="primary">Reconnect GitHub</Button></form>}{needsConnection && <form action={connectGitHub}><Button variant="primary">Connect GitHub</Button></form>}</Card>}
       {!loading && !error && visibleRepositories.length === 0 && <Card><EmptyState title="ไม่พบ repository" description={search ? "ลองเปลี่ยนคำค้นหาหรือตัวกรอง" : "บัญชีนี้ยังไม่มี repository ที่ตรงกับตัวกรอง"} /></Card>}
-      {!loading && !error && visibleRepositories.length > 0 && <div className="github-repository-grid">{visibleRepositories.map(repository => <RepositoryCard key={repository.id} repository={repository} selected={selectedId === repository.id} onSelect={() => setSelectedId(current => current === repository.id ? undefined : repository.id)} />)}</div>}
+      {!loading && !error && visibleRepositories.length > 0 && <div className="github-repository-grid">{visibleRepositories.map(repository => <GitHubSearchRepositoryCard key={repository.id} repository={repository} connected={connectedIds.has(repository.id)} connecting={connectingId === repository.id} onConnect={() => void connectRepository(repository)} />)}</div>}
     </div>
 
     {!loading && !error && hasNext && <div className="github-load-more"><Button onClick={() => void loadMore()} loading={loadingMore}>Load more</Button></div>}

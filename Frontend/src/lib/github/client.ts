@@ -128,3 +128,60 @@ export async function listGitHubRepositories(
     hasNext: query.page < GITHUB_MAX_PAGE && response.headers.get("link")?.includes('rel="next"') === true,
   };
 }
+
+export async function getGitHubRepository(
+  token: string,
+  repositoryId: number,
+  privateReposEnabled: boolean,
+  fetcher: GitHubFetch = fetch,
+  timeoutMs = GITHUB_REQUEST_TIMEOUT_MS,
+) {
+  if (!Number.isSafeInteger(repositoryId) || repositoryId <= 0) {
+    throw new GitHubClientError("not_found");
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let response: Response;
+  try {
+    response = await fetcher(new URL(`/repositories/${repositoryId}`, GITHUB_API_ORIGIN), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": GITHUB_API_VERSION,
+        "User-Agent": "DEV-LIFE",
+      },
+      cache: "no-store",
+      redirect: "manual",
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new GitHubClientError("timeout");
+    }
+    throw new GitHubClientError("unavailable");
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!response.ok) throw statusError(response);
+
+  let input: unknown;
+  try {
+    input = await response.json();
+  } catch {
+    throw new GitHubClientError("invalid_response");
+  }
+
+  let repository: GitHubRepository;
+  try {
+    [repository] = sanitizeGitHubRepositories([input]);
+  } catch {
+    throw new GitHubClientError("invalid_response");
+  }
+  if (!repository || (!privateReposEnabled && repository.private)) {
+    throw new GitHubClientError("permission");
+  }
+  return repository;
+}

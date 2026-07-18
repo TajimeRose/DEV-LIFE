@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { defaultViewport } from "@/lib/flowchart/default-flowchart";
+import { toFlowchartRecord } from "@/lib/flowchart/flowchart-types";
 
 const uuid = z.uuid();
 const nameSchema = z.string().trim().min(1).max(200);
@@ -46,7 +47,7 @@ export async function createFlowchartInline(projectInput: string, nameInput: str
   if (error) throw new Error(error.message);
   await logActivity(supabase, user.id, projectId, "created", data.id, data.name);
   revalidatePath(`/projects/${projectId}/flowcharts`);
-  return data;
+  return toFlowchartRecord(data);
 }
 
 export async function renameFlowchart(projectId: string, flowchartId: string, name: string) {

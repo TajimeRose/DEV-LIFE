@@ -5,10 +5,10 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { createAndSelectProject, selectProject } from "@/app/actions/workspace";
 import { logout } from "@/app/auth/actions";
-import type { Project } from "@/lib/database.types";
+import type { Tables } from "@/lib/database.types";
 import { Button, Card, FormField, Input } from "@/components/ui";
 
-type ProjectSummary = Pick<Project, "id" | "name" | "created_at">;
+type ProjectSummary = Pick<Tables<"projects">, "id" | "name" | "created_at">;
 
 function ProjectButton({ project }: { project: ProjectSummary }) {
   const { pending } = useFormStatus();
@@ -16,7 +16,7 @@ function ProjectButton({ project }: { project: ProjectSummary }) {
   return <button type="submit" disabled={pending} aria-label={`เปิดโปรเจกต์ ${project.name}`}>
     <span>
       <b>{project.name}</b>
-      <small>สร้างเมื่อ {new Date(project.created_at).toLocaleDateString("th-TH")}</small>
+      <small>สร้างเมื่อ {project.created_at ? new Date(project.created_at).toLocaleDateString("th-TH") : "ไม่ทราบวันที่"}</small>
     </span>
     <i className={pending ? "project-open-state" : ""} aria-hidden="true">
       {pending ? <><span className="ui-spinner" /> กำลังเปิด</> : "→"}
