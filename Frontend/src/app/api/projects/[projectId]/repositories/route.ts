@@ -13,6 +13,22 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+function reportRepositoryConnectionError(
+  operation: "list" | "connect" | "record_activity",
+  error: unknown,
+) {
+  const details = typeof error === "object" && error !== null
+    ? {
+        name: "name" in error && typeof error.name === "string" ? error.name : undefined,
+        code: "code" in error && typeof error.code === "string" ? error.code : undefined,
+        message: "message" in error && typeof error.message === "string" ? error.message : "Unknown error",
+        details: "details" in error && typeof error.details === "string" ? error.details : undefined,
+        hint: "hint" in error && typeof error.hint === "string" ? error.hint : undefined,
+      }
+    : { message: String(error) };
+  console.error("Repository connection failed", { operation, ...details });
+}
+
 function dependencies(): RepositoryConnectionDependencies {
   const context = (async () => {
     const supabase = await createClient();
@@ -97,6 +113,7 @@ function dependencies(): RepositoryConnectionDependencies {
         metadata: { github_repository_id: repository.github_repository_id },
       });
     },
+    reportError: reportRepositoryConnectionError,
   };
 }
 

@@ -114,3 +114,33 @@ test("repository connection responses never include GitHub secrets", async () =>
   assert.equal(body.includes("server-only-token"), false);
   assert.equal(body.includes("GITHUB_TOKEN_ENCRYPTION_KEY"), false);
 });
+
+test("a repository remains connected when recording its activity fails", async () => {
+  const reported: Array<{ operation: string; error: unknown }> = [];
+  const deps = dependencies({
+    recordConnection: async () => { throw new Error("activity insert failed"); },
+    reportError: (operation, error) => { reported.push({ operation, error }); },
+  });
+
+  const response = await handleProjectRepositoriesPost(connectRequest(), "project-id", deps);
+
+  assert.equal(response.status, 201);
+  assert.equal(deps.persisted.length, 1);
+  assert.equal(reported.length, 1);
+  assert.equal(reported[0].operation, "record_activity");
+});
+
+test("database connection failures are reported without exposing details to the client", async () => {
+  const databaseError = Object.assign(new Error("row-level security policy denied insert"), { code: "42501" });
+  const reported: Array<{ operation: string; error: unknown }> = [];
+  const response = await handleProjectRepositoriesPost(connectRequest(), "project-id", dependencies({
+    insert: async () => { throw databaseError; },
+    reportError: (operation, error) => { reported.push({ operation, error }); },
+  }));
+
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), {
+    error: { code: "INTERNAL_ERROR", message: "Unable to connect the repository." },
+  });
+  assert.deepEqual(reported, [{ operation: "connect", error: databaseError }]);
+});

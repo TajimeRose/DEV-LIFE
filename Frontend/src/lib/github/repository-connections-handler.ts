@@ -21,12 +21,25 @@ export type RepositoryConnectionDependencies = {
   readGitHubRepository: (userId: string, githubRepositoryId: number) => Promise<GitHubRepository | null>;
   insert: (projectId: string, userId: string, repository: GitHubRepository) => Promise<ConnectedRepository>;
   recordConnection: (projectId: string, userId: string, repository: ConnectedRepository) => Promise<void>;
+  reportError?: (operation: "list" | "connect" | "record_activity", error: unknown) => void;
 };
 
 const headers = { "Cache-Control": "private, no-store" };
 
 function errorResponse(status: number, code: RepositoryConnectionErrorCode, message: string) {
   return Response.json({ error: { code, message } }, { status, headers });
+}
+
+function reportError(
+  dependencies: RepositoryConnectionDependencies,
+  operation: "list" | "connect" | "record_activity",
+  error: unknown,
+) {
+  try {
+    dependencies.reportError?.(operation, error);
+  } catch {
+    // Error reporting must never replace the response from this handler.
+  }
 }
 
 async function authenticateAndAuthorize(
@@ -58,7 +71,8 @@ export async function handleProjectRepositoriesGet(
     if (!access.ok) return access.response;
     const repositories = await dependencies.list(projectId);
     return Response.json({ data: { repositories } }, { headers });
-  } catch {
+  } catch (error) {
+    reportError(dependencies, "list", error);
     return errorResponse(500, "INTERNAL_ERROR", "Unable to load connected repositories.");
   }
 }
@@ -110,9 +124,14 @@ export async function handleProjectRepositoriesPost(
       throw error;
     }
 
-    await dependencies.recordConnection(projectId, access.auth.userId, repository);
+    try {
+      await dependencies.recordConnection(projectId, access.auth.userId, repository);
+    } catch (error) {
+      reportError(dependencies, "record_activity", error);
+    }
     return Response.json({ data: { repository } }, { status: 201, headers });
   } catch (error) {
+    reportError(dependencies, "connect", error);
     if (
       typeof error === "object" &&
       error !== null &&
