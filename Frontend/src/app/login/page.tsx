@@ -13,8 +13,7 @@ function SubmitButton() {
 
   return (
     <Button className="auth-submit" variant="primary" type="submit" loading={pending}>
-      <span>{pending ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ Workspace"}</span>
-      {!pending && <span aria-hidden="true">→</span>}
+      <span>{pending ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่พื้นที่ทำงาน"}</span>
     </Button>
   );
 }
@@ -31,23 +30,20 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ au
           <b>DEV LIFE</b>
         </div>
         <div className="auth-message">
-          <small>DEVELOPER WORKSPACE</small>
           <h1>ทุกบริบทของโปรเจกต์ อยู่ในพื้นที่เดียว</h1>
-          <p>จัดการ notes, tasks และ development flow ให้ต่อเนื่อง พร้อมกลับมาทำงานต่อได้ทันที</p>
+          <p>จัดการโน้ต งาน และขั้นตอนการพัฒนาให้ต่อเนื่อง พร้อมกลับมาทำงานต่อได้ทันที</p>
           <div className="auth-preview" aria-hidden="true">
-            <div><span>PROJECT STATUS</span><b>DEV-LIFE Workspace</b><small>Active development</small></div>
-            <ul><li><i>✓</i><span><b>Project context</b><small>Notes และ tasks เชื่อมถึงกัน</small></span></li><li><i>⌘</i><span><b>Focused workflow</b><small>วางแผนและลงมือในที่เดียว</small></span></li><li><i>↗</i><span><b>Progress visibility</b><small>ติดตามสิ่งสำคัญได้ชัดเจน</small></span></li></ul>
+            <ul><li><i>01</i><span><b>บริบทของโปรเจกต์</b><small>โน้ตและงานอยู่ในพื้นที่เดียวกัน</small></span></li><li><i>02</i><span><b>ขั้นตอนการทำงาน</b><small>วางแผนและลงมือในที่เดียว</small></span></li><li><i>03</i><span><b>ความคืบหน้า</b><small>ติดตามสิ่งสำคัญได้ชัดเจน</small></span></li></ul>
           </div>
         </div>
-        <p className="auth-story-footer">Built for developers who value clarity.</p>
+        <p className="auth-story-footer">พื้นที่ทำงานที่ชัดเจนสำหรับนักพัฒนา</p>
       </section>
 
       <section className="auth-entry">
         <Card className="auth-card">
           <div className="auth-mobile-brand"><Image src="/Logo.png" alt="Dev Life" width={42} height={42} priority /><b>DEV LIFE</b></div>
-          <small className="auth-eyebrow">WELCOME BACK</small>
           <h2>เข้าสู่ระบบ</h2>
-          <p className="auth-description">กรอกข้อมูลเพื่อกลับเข้าสู่ DEV LIFE workspace ของคุณ</p>
+          <p className="auth-description">กรอกข้อมูลเพื่อกลับเข้าสู่พื้นที่ทำงานของคุณ</p>
           {params.authError === "github" && <p className="auth-error" role="alert">เข้าสู่ระบบด้วย GitHub ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>}
           <form className="auth-form" action={formAction}>
             {state?.error && <p className="auth-error" role="alert">{state.error}</p>}
@@ -58,9 +54,9 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ au
           <div className="auth-divider"><span>หรือ</span></div>
           <GitHubAuthButton label="เข้าสู่ระบบด้วย GitHub" />
           <p className="auth-switch">ยังไม่มีบัญชี? <Link href="/register">สมัครสมาชิกฟรี</Link></p>
-          <div className="auth-secure"><span aria-hidden="true">◇</span><p><b>Secure authentication</b><small>บัญชีและ session ของคุณได้รับการจัดการผ่าน Supabase Auth</small></p></div>
+          <div className="auth-secure"><p><b>การยืนยันตัวตนที่ปลอดภัย</b><small>บัญชีและ Session ของคุณได้รับการจัดการผ่าน Supabase Auth</small></p></div>
         </Card>
-        <p className="auth-copyright">© 2026 DEV LIFE · Developer productivity workspace</p>
+        <p className="auth-copyright">© 2026 DEV LIFE · พื้นที่ทำงานสำหรับนักพัฒนา</p>
       </section>
     </main>
   );

@@ -14,7 +14,6 @@ function SubmitButton() {
   return (
     <Button className="auth-submit" variant="primary" type="submit" loading={pending}>
       <span>{pending ? "กำลังสร้างบัญชี..." : "สร้างบัญชี"}</span>
-      {!pending && <span aria-hidden="true">→</span>}
     </Button>
   );
 }
@@ -27,23 +26,21 @@ export default function RegisterPage() {
       <section className="auth-story">
         <div className="auth-brand"><Image src="/Logo.png" alt="Dev Life" width={42} height={42} priority /><b>DEV LIFE</b></div>
         <div className="auth-message">
-          <small>START YOUR WORKSPACE</small>
           <h1>เปลี่ยนไอเดีย ให้กลายเป็นงานที่ชัดเจน</h1>
-          <p>เริ่มพื้นที่ทำงานสำหรับจัดการ project context, notes และ tasks ของคุณได้ในไม่กี่วินาที</p>
+          <p>เริ่มพื้นที่ทำงานสำหรับจัดการบริบท โน้ต และงานของโปรเจกต์ได้ในไม่กี่ขั้นตอน</p>
           <div className="auth-preview" aria-hidden="true">
-            <div><span>YOUR WORKSPACE</span><b>พร้อมสำหรับโปรเจกต์ถัดไป</b><small>Private by default</small></div>
+            <div><span>พื้นที่ทำงานของคุณ</span><b>พร้อมสำหรับโปรเจกต์ถัดไป</b><small>ข้อมูลแยกตามบัญชี</small></div>
             <ul><li><i>01</i><span><b>Capture context</b><small>เก็บข้อมูลสำคัญอย่างเป็นระบบ</small></span></li><li><i>02</i><span><b>Plan the work</b><small>แตกไอเดียเป็น task ที่ลงมือได้</small></span></li><li><i>03</i><span><b>Keep momentum</b><small>เห็น progress และทำงานต่อเนื่อง</small></span></li></ul>
           </div>
         </div>
-        <p className="auth-story-footer">Your data stays protected with Supabase Auth.</p>
+        <p className="auth-story-footer">ข้อมูลบัญชีได้รับการดูแลผ่าน Supabase Auth</p>
       </section>
 
       <section className="auth-entry">
         <Card className="auth-card">
           <div className="auth-mobile-brand"><Image src="/Logo.png" alt="Dev Life" width={42} height={42} priority /><b>DEV LIFE</b></div>
-          <small className="auth-eyebrow">CREATE ACCOUNT</small>
           <h2>สมัครสมาชิก</h2>
-          <p className="auth-description">สร้างบัญชีเพื่อเริ่มต้น DEV LIFE workspace ของคุณ</p>
+          <p className="auth-description">สร้างบัญชีเพื่อเริ่มพื้นที่ทำงานของคุณ</p>
           <form className="auth-form" action={formAction}>
             {state?.error && <p className="auth-error" role="alert">{state.error}</p>}
             {state?.success && <p className="auth-success" role="status">{state.success}</p>}
@@ -56,7 +53,7 @@ export default function RegisterPage() {
           <GitHubAuthButton label="สมัครสมาชิกด้วย GitHub" />
           <p className="auth-switch">มีบัญชีอยู่แล้ว? <Link href="/login">เข้าสู่ระบบ</Link></p>
         </Card>
-        <p className="auth-copyright">© 2026 DEV LIFE · Developer productivity workspace</p>
+        <p className="auth-copyright">© 2026 DEV LIFE · พื้นที่ทำงานสำหรับนักพัฒนา</p>
       </section>
     </main>
   );

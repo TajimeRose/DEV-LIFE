@@ -96,11 +96,11 @@ function eventLabel(type: TimelineEvent["type"]) {
 }
 
 function eventIcon(type: TimelineEvent["type"]) {
-  if (type === "commit_pushed") return "●";
-  if (type.startsWith("pull_request_")) return "⑂";
-  if (type === "review_submitted") return "✓";
-  if (type.startsWith("sync_")) return "↻";
-  return "◇";
+  if (type === "commit_pushed") return "CM";
+  if (type.startsWith("pull_request_")) return "PR";
+  if (type === "review_submitted") return "RV";
+  if (type.startsWith("sync_")) return "SY";
+  return "EV";
 }
 
 function eventTime(event: TimelineEvent) {
@@ -154,9 +154,9 @@ export function PullRequestTimelineCard({
       <div className="timeline-row-main">
         <div>
           <h3>#{event.pullRequestNumber} {event.title}</h3>
-          <p>{event.actor ? `${event.actor} · ` : ""}<span className="timeline-branch">{event.sourceBranch}</span><span className="timeline-branch-arrow">→</span><span className="timeline-branch">{event.targetBranch}</span></p>
+          <p>{event.actor ? `${event.actor} · ` : ""}<span className="timeline-branch">{event.sourceBranch}</span><span className="timeline-branch-arrow">ไปยัง</span><span className="timeline-branch">{event.targetBranch}</span></p>
         </div>
-        <span className="timeline-open-detail">View details →</span>
+        <span className="timeline-open-detail">ดูรายละเอียด</span>
       </div>
     </button>
   </TimelineItem>;
@@ -179,7 +179,7 @@ export function CommitTimelineCard({
         </div>
         <div className="timeline-row-actions">
           <code>{event.commitShortSha}</code>
-          <span className="timeline-open-detail">View →</span>
+          <span className="timeline-open-detail">ดูรายละเอียด</span>
         </div>
       </div>
       {event.description && <p className="timeline-description">{event.description}</p>}
@@ -202,7 +202,7 @@ export function ReviewTimelineCard({
           <h3>{event.title}</h3>
           <p>{event.actor ? `Reviewed by ${event.actor}` : "Reviewer unavailable"}</p>
         </div>
-        <span className="timeline-open-detail">View review →</span>
+        <span className="timeline-open-detail">ดูรีวิว</span>
       </div>
       {event.description && <blockquote>{event.description}</blockquote>}
     </button>
@@ -319,7 +319,7 @@ export function CommitDetail({
         </article>)}
         {!activeDetail.files.length && <p className="empty-copy">GitHub reported no changed files for this commit.</p>}
       </section>}
-      {event.githubUrl && <a href={event.githubUrl} target="_blank" rel="noreferrer noopener">Open commit on GitHub ↗</a>}
+      {event.githubUrl && <a href={event.githubUrl} target="_blank" rel="noreferrer noopener">เปิด Commit บน GitHub</a>}
     </div>}
   </Modal>;
 }
@@ -375,7 +375,7 @@ export function PullRequestDetail({
     open={Boolean(pullRequestId)}
     onClose={onClose}
     title={pullRequest ? `#${pullRequest.pull_request_number} ${pullRequest.title}` : "Pull Request details"}
-    description={pullRequest ? `${pullRequest.source_branch} → ${pullRequest.target_branch}` : undefined}
+    description={pullRequest ? `${pullRequest.source_branch} ไปยัง ${pullRequest.target_branch}` : undefined}
     footer={<Button onClick={onClose}>Close</Button>}
   >
     {loading && <TimelineLoadingSkeleton />}
@@ -405,7 +405,7 @@ export function PullRequestDetail({
         {!activeDetail.reviews.length && <p className="empty-copy">No reviews have been synchronized.</p>}
       </section>
       <Card className="diff-unavailable"><h3>Related commits and diff unavailable</h3><p>{activeDetail.diff.reason}</p></Card>
-      {pullRequest.github_url && <a href={pullRequest.github_url} target="_blank" rel="noreferrer noopener">Open Pull Request on GitHub ↗</a>}
+      {pullRequest.github_url && <a href={pullRequest.github_url} target="_blank" rel="noreferrer noopener">เปิด Pull Request บน GitHub</a>}
     </div>}
   </Modal>;
 }
@@ -503,14 +503,14 @@ export function RepositoryTimeline({
   return <>
     <header className="repository-page-header">
       <div>
-        <Link href="/settings/integrations">← Repositories</Link>
-        <small>REPOSITORY TIMELINE</small>
+        <Link href="/settings/integrations">กลับไปหน้า Repository</Link>
+        <small>ประวัติ Repository</small>
         <h1>{repository?.github_full_name ?? "Repository"}</h1>
         <p>Shared commits, Pull Requests, reviews, and synchronization history from Supabase.</p>
       </div>
       <div className="repository-page-actions">
         <Button variant="primary" loading={syncing} onClick={() => void synchronize()}>Sync from GitHub</Button>
-        {repository?.github_url && <a className="view-board" href={repository.github_url} target="_blank" rel="noreferrer noopener">Open GitHub ↗</a>}
+        {repository?.github_url && <a className="view-board" href={repository.github_url} target="_blank" rel="noreferrer noopener">เปิดบน GitHub</a>}
       </div>
     </header>
     {syncMessage && <p className={syncMessage.tone === "success" ? "form-success" : "form-error"} role={syncMessage.tone === "success" ? "status" : "alert"}>{syncMessage.text}</p>}
@@ -531,7 +531,7 @@ export function RepositoryTimeline({
       </Card>}
       <section className="repository-history-panel" aria-labelledby="repository-history-title">
         <header className="repository-history-header">
-          <div><small>REPOSITORY HISTORY</small><h2 id="repository-history-title">Activity</h2></div>
+          <div><small>ประวัติ Repository</small><h2 id="repository-history-title">กิจกรรม</h2></div>
           <Badge tone="neutral">{visibleEvents.length} events</Badge>
         </header>
         <div className="repository-timeline-scroll" aria-label="Repository timeline">

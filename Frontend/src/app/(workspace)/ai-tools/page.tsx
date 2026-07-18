@@ -1,3 +1,5 @@
-import { AITools } from "@/components/features";
+import { redirect } from "next/navigation";
 
-export default function Page() { return <AITools />; }
+export default function Page() {
+  redirect("/dashboard");
+}

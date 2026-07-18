@@ -55,10 +55,10 @@ function GitHubSearchRepositoryCard({
     <p>{repository.description || "ไม่มีคำอธิบาย repository"}</p>
     <footer>
       <span>{repository.language || "ไม่ระบุภาษา"}</span>
-      <span>★ {repository.stargazersCount}</span>
-      <span>⑂ {repository.forksCount}</span>
-      <span>Branch: {repository.defaultBranch}</span>
-      <Button size="sm" variant={connected ? "primary" : "secondary"} loading={connecting} disabled={connected} onClick={onConnect}>{connected ? "✓ Connected" : "Connect to project"}</Button>
+      <span>Stars {repository.stargazersCount}</span>
+      <span>Forks {repository.forksCount}</span>
+      <span>สาขาหลัก: {repository.defaultBranch}</span>
+      <Button size="sm" variant={connected ? "primary" : "secondary"} loading={connecting} disabled={connected} onClick={onConnect}>{connected ? "เชื่อมต่อแล้ว" : "เชื่อมกับโปรเจกต์"}</Button>
     </footer>
   </Card>;
 }
@@ -199,25 +199,25 @@ export function GitHubRepositoryBrowser({
   return <>
     <header className="github-page-header">
       <div>
-        <small>GITHUB · READ-ONLY</small>
-        <h1>GitHub repositories</h1>
-        <p>ค้นหาและดู repository ที่บัญชี GitHub ของคุณอนุญาตให้ DEV-LIFE เข้าถึง</p>
+        <small>GitHub แบบอ่านอย่างเดียว</small>
+        <h1>Repository</h1>
+        <p>ค้นหาและดู Repository ที่บัญชี GitHub ของคุณอนุญาตให้ DEV LIFE เข้าถึง</p>
       </div>
       <div className="github-connection-actions">
-        <Badge tone={connected ? "success" : "neutral"}>{connected ? "● Connected" : "○ Not connected"}</Badge>
-        {(needsConnection || needsReconnect) && <form action={connectGitHub}><Button variant="primary" type="submit">{needsReconnect ? "Reconnect GitHub" : "Connect GitHub"}</Button></form>}
-        {connected && <Button variant="danger" onClick={() => setConfirmDisconnect(true)}>Disconnect GitHub</Button>}
+        <Badge tone={connected ? "success" : "neutral"}>{connected ? "เชื่อมต่อแล้ว" : "ยังไม่ได้เชื่อมต่อ"}</Badge>
+        {(needsConnection || needsReconnect) && <form action={connectGitHub}><Button variant="primary" type="submit">{needsReconnect ? "เชื่อมต่อ GitHub อีกครั้ง" : "เชื่อมต่อ GitHub"}</Button></form>}
+        {connected && <Button variant="danger" onClick={() => setConfirmDisconnect(true)}>ยกเลิกการเชื่อมต่อ</Button>}
       </div>
     </header>
 
     <RepositoryList projectId={projectId} refreshKey={connectionRefresh} onLoaded={connectedLoaded} />
 
     <Card className="github-privacy">
-      <span aria-hidden="true">◇</span>
+      <span aria-hidden="true">01</span>
       <div>
-        <b>Read-only by design</b>
-        <p>DEV-LIFE only reads repository information that you authorize through GitHub. It does not modify, delete, push to, or manage your repositories.</p>
-        {privateReposEnabled && <small>Private repository access is optional and requires additional GitHub permission. DEV-LIFE will use this permission only to display repositories you are authorized to view.</small>}
+        <b>เข้าถึงแบบอ่านอย่างเดียว</b>
+        <p>DEV LIFE อ่านเฉพาะข้อมูล Repository ที่คุณอนุญาตผ่าน GitHub และไม่แก้ไข ลบ หรือ Push ข้อมูล</p>
+        {privateReposEnabled && <small>การเข้าถึง Private Repository เป็นตัวเลือกและต้องได้รับสิทธิ์เพิ่มเติม โดยใช้เพื่อแสดงเฉพาะ Repository ที่คุณมีสิทธิ์ดู</small>}
       </div>
     </Card>
 
@@ -246,10 +246,10 @@ export function GitHubRepositoryBrowser({
       open={confirmDisconnect}
       onClose={() => setConfirmDisconnect(false)}
       title="ยกเลิกการเชื่อมต่อ GitHub?"
-      description="Disconnecting GitHub will stop DEV-LIFE from loading your repositories. It will not delete your GitHub repositories or your DEV-LIFE account."
-      footer={<><Button onClick={() => setConfirmDisconnect(false)}>ยกเลิก</Button><form action={disconnectGitHub}><Button variant="danger" type="submit">Disconnect GitHub</Button></form></>}
+      description="DEV LIFE จะหยุดโหลดข้อมูล Repository แต่จะไม่ลบ Repository หรือบัญชีของคุณ"
+      footer={<><Button onClick={() => setConfirmDisconnect(false)}>ยกเลิก</Button><form action={disconnectGitHub}><Button variant="danger" type="submit">ยืนยันการยกเลิก</Button></form></>}
     >
-      <p>การดำเนินการนี้จะลบเฉพาะ token ชั่วคราวของ DEV-LIFE คุณสามารถเพิกถอน OAuth App เพิ่มเติมได้ที่ GitHub Settings → Applications</p>
+      <p>การดำเนินการนี้จะลบเฉพาะ Token ของ DEV LIFE คุณสามารถเพิกถอน OAuth App เพิ่มเติมได้ใน GitHub Settings ส่วน Applications</p>
     </Modal>
   </>;
 }

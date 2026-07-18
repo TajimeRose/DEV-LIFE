@@ -34,7 +34,7 @@ export function RepositoryCard({
       </Badge>
       {repository.is_private && <Badge tone="warning">Private</Badge>}
     </div>
-    <Link href={`/projects/${projectId}/repositories/${repository.id}`}>Open timeline →</Link>
+    <Link href={`/projects/${projectId}/repositories/${repository.id}`}>เปิดประวัติ</Link>
   </Card>;
 }
 

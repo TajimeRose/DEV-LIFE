@@ -1,70 +1,462 @@
 "use client";
 
-import { cloneElement, createContext, forwardRef, isValidElement, useContext, useEffect, useId, useRef, useState } from "react";
+import {
+  cloneElement,
+  createContext,
+  forwardRef,
+  isValidElement,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger"; size?: "sm" | "md" | "lg"; loading?: boolean };
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({ className = "", variant = "secondary", size = "md", loading, children, disabled, ...props }, ref) { return <button ref={ref} className={`ui-button ui-button-${variant} ui-button-${size} ${className}`} disabled={disabled || loading} {...props}>{loading && <span className="ui-spinner" aria-hidden="true" />}{children}</button>; });
-export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input({ className = "", ...props }, ref) { return <input ref={ref} className={`ui-input ${className}`} {...props} />; });
-export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({ className = "", ...props }, ref) { return <textarea ref={ref} className={`ui-textarea ${className}`} {...props} />; });
-export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(function Select({ className = "", children, ...props }, ref) { return <select ref={ref} className={`ui-select ${className}`} {...props}>{children}</select>; });
-export function Card({ children, className = "", as: Tag = "section", ...props }: React.HTMLAttributes<HTMLElement> & { children: React.ReactNode; as?: "section" | "article" | "div" }) { return <Tag className={`ui-card ${className}`} {...props}>{children}</Tag>; }
-export function Badge({ children, tone = "neutral", className = "" }: { children: React.ReactNode; tone?: "neutral" | "success" | "warning" | "danger" | "brand"; className?: string }) { return <span className={`ui-badge ui-badge-${tone} ${className}`}>{children}</span>; }
-export function Loading({ label = "กำลังโหลด…", fullPage = false }: { label?: string; fullPage?: boolean }) { return <div className={`ui-loading ${fullPage ? "ui-loading-page" : ""}`} role="status"><span className="ui-spinner" /><span>{label}</span></div>; }
-export function EmptyState({ title, description, action }: { title: string; description?: string; action?: React.ReactNode }) { return <div className="ui-empty"><span aria-hidden="true">◇</span><h2>{title}</h2>{description && <p>{description}</p>}{action}</div>; }
-export function PageHeader({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: React.ReactNode }) { return <header className="ui-page-header"><div>{eyebrow && <span>{eyebrow}</span>}<h1>{title}</h1>{description && <p>{description}</p>}</div>{action && <div className="ui-page-actions">{action}</div>}</header>; }
-export function FormField({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactElement<{ id?: string; "aria-describedby"?: string }> }) { const generatedId = useId(); const errorId = `${generatedId}-error`; const control = isValidElement(children) ? cloneElement(children, { id: children.props.id || generatedId, "aria-describedby": error ? errorId : children.props["aria-describedby"] }) : children; return <div className="ui-field"><label htmlFor={children.props.id || generatedId}><span>{label}</span>{hint && <small>{hint}</small>}</label>{control}{error && <em id={errorId} role="alert">{error}</em>}</div>; }
-export function Modal({ open, onClose, title, description, children, footer }: { open: boolean; onClose: () => void; title: string; description?: string; children: React.ReactNode; footer?: React.ReactNode }) {
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "secondary" | "ghost" | "danger";
+  size?: "sm" | "md" | "lg";
+  loading?: boolean;
+};
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    className = "",
+    variant = "secondary",
+    size = "md",
+    loading,
+    children,
+    disabled,
+    ...props
+  },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      className={`ui-button ui-button-${variant} ui-button-${size} ${className}`}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading && <span className="ui-spinner" aria-hidden="true" />}
+      {children}
+    </button>
+  );
+});
+
+export const Input = forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(function Input({ className = "", ...props }, ref) {
+  return <input ref={ref} className={`ui-input ${className}`} {...props} />;
+});
+
+export const Textarea = forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function Textarea({ className = "", ...props }, ref) {
+  return <textarea ref={ref} className={`ui-textarea ${className}`} {...props} />;
+});
+
+export const Select = forwardRef<
+  HTMLSelectElement,
+  React.SelectHTMLAttributes<HTMLSelectElement>
+>(function Select({ className = "", children, ...props }, ref) {
+  return (
+    <select ref={ref} className={`ui-select ${className}`} {...props}>
+      {children}
+    </select>
+  );
+});
+
+export function Card({
+  children,
+  className = "",
+  as: Tag = "section",
+  ...props
+}: React.HTMLAttributes<HTMLElement> & {
+  children: React.ReactNode;
+  as?: "section" | "article" | "div";
+}) {
+  return (
+    <Tag className={`ui-card ${className}`} {...props}>
+      {children}
+    </Tag>
+  );
+}
+
+export function Badge({
+  children,
+  tone = "neutral",
+  className = "",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "success" | "warning" | "danger" | "brand";
+  className?: string;
+}) {
+  return (
+    <span className={`ui-badge ui-badge-${tone} ${className}`}>{children}</span>
+  );
+}
+
+export function Loading({
+  label = "กำลังโหลด…",
+  fullPage = false,
+}: {
+  label?: string;
+  fullPage?: boolean;
+}) {
+  return (
+    <div
+      className={`ui-loading ${fullPage ? "ui-loading-page" : ""}`}
+      role="status"
+    >
+      <span className="ui-spinner" aria-hidden="true" />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+export function EmptyState({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="ui-empty">
+      <span className="ui-empty-marker" aria-hidden="true" />
+      <h2>{title}</h2>
+      {description && <p>{description}</p>}
+      {action}
+    </div>
+  );
+}
+
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <header className="ui-page-header">
+      <div>
+        {eyebrow && <span>{eyebrow}</span>}
+        <h1>{title}</h1>
+        {description && <p>{description}</p>}
+      </div>
+      {action && <div className="ui-page-actions">{action}</div>}
+    </header>
+  );
+}
+
+export function FormField({
+  label,
+  hint,
+  error,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  error?: string;
+  children: React.ReactElement<{
+    id?: string;
+    "aria-describedby"?: string;
+  }>;
+}) {
+  const generatedId = useId();
+  const errorId = `${generatedId}-error`;
+  const control = isValidElement(children)
+    ? cloneElement(children, {
+        id: children.props.id || generatedId,
+        "aria-describedby": error
+          ? errorId
+          : children.props["aria-describedby"],
+      })
+    : children;
+
+  return (
+    <div className="ui-field">
+      <label htmlFor={children.props.id || generatedId}>
+        <span>{label}</span>
+        {hint && <small>{hint}</small>}
+      </label>
+      {control}
+      {error && (
+        <em id={errorId} role="alert">
+          {error}
+        </em>
+      )}
+    </div>
+  );
+}
+
+const focusableSelector = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
+export function Modal({
+  open,
+  onClose,
+  title,
+  description,
+  children,
+  footer,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
   const titleId = useId();
   const descriptionId = useId();
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     const previousPaddingRight = document.body.style.paddingRight;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    const currentPaddingRight = Number.parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
-    const key = (event: KeyboardEvent) => event.key === "Escape" && onClose();
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
+    const currentPaddingRight =
+      Number.parseFloat(window.getComputedStyle(document.body).paddingRight) ||
+      0;
+
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab" || !ref.current) return;
+
+      const focusable = Array.from(
+        ref.current.querySelectorAll<HTMLElement>(focusableSelector),
+      );
+      if (!focusable.length) {
+        event.preventDefault();
+        ref.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
 
     document.body.style.overflow = "hidden";
     if (scrollbarWidth > 0) {
       document.body.style.paddingRight = `${currentPaddingRight + scrollbarWidth}px`;
     }
-    ref.current?.focus();
+    const frame = window.requestAnimationFrame(() => {
+      const firstControl =
+        ref.current?.querySelector<HTMLElement>("[autofocus]") ??
+        ref.current?.querySelector<HTMLElement>(focusableSelector);
+      (firstControl ?? ref.current)?.focus();
+    });
     document.addEventListener("keydown", key);
 
     return () => {
+      window.cancelAnimationFrame(frame);
       document.removeEventListener("keydown", key);
       document.body.style.overflow = previousOverflow;
       document.body.style.paddingRight = previousPaddingRight;
       previousFocus?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
-  return <div className="ui-modal-layer" role="presentation" onMouseDown={onClose}>
+
+  return (
     <div
-      ref={ref}
-      tabIndex={-1}
-      className="ui-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      aria-describedby={description ? descriptionId : undefined}
-      onMouseDown={event => event.stopPropagation()}
+      className="ui-modal-layer"
+      role="presentation"
+      onMouseDown={onClose}
     >
-      <header>
-        <div><h2 id={titleId}>{title}</h2>{description && <p id={descriptionId}>{description}</p>}</div>
-        <Button variant="ghost" size="sm" aria-label="ปิด" onClick={onClose}>×</Button>
-      </header>
-      <div className="ui-modal-body">{children}</div>
-      {footer && <footer>{footer}</footer>}
+      <div
+        ref={ref}
+        tabIndex={-1}
+        className="ui-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <h2 id={titleId}>{title}</h2>
+            {description && <p id={descriptionId}>{description}</p>}
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            ปิด
+          </Button>
+        </header>
+        <div className="ui-modal-body">{children}</div>
+        {footer && <footer>{footer}</footer>}
+      </div>
     </div>
-  </div>;
+  );
 }
-export function Dropdown({ label, children, align = "right" }: { label: React.ReactNode; children: React.ReactNode; align?: "left" | "right" }) { return <details className={`ui-dropdown ui-dropdown-${align}`}><summary>{label}</summary><div className="ui-dropdown-menu">{children}</div></details>; }
-export function Tabs({ items, value, onChange, label = "แท็บ" }: { items: { value: string; label: string }[]; value: string; onChange: (value: string) => void; label?: string }) { return <div className="ui-tabs" role="tablist" aria-label={label}>{items.map(item => <Button variant="ghost" key={item.value} role="tab" aria-selected={value === item.value} onClick={() => onChange(item.value)}>{item.label}</Button>)}</div>; }
-const ToastContext = createContext<(message: string, tone?: "success" | "danger") => void>(() => {});
-export function ToastProvider({ children }: { children: React.ReactNode }) { const [toast, setToast] = useState<{ message: string; tone: string }>(); const timeout = useRef<ReturnType<typeof setTimeout>>(undefined); useEffect(() => () => { if (timeout.current) clearTimeout(timeout.current); }, []); const dismiss = () => { if (timeout.current) clearTimeout(timeout.current); setToast(undefined); }; const show = (message: string, tone = "success") => { if (timeout.current) clearTimeout(timeout.current); setToast({ message, tone }); timeout.current = setTimeout(() => setToast(undefined), 3200); }; return <ToastContext.Provider value={show}>{children}{toast && <div className={`ui-toast ui-toast-${toast.tone}`} role="status">{toast.message}<Button variant="ghost" size="sm" aria-label="ปิดการแจ้งเตือน" onClick={dismiss}>×</Button></div>}</ToastContext.Provider>; }
+
+export function Dropdown({
+  label,
+  children,
+  align = "right",
+}: {
+  label: React.ReactNode;
+  children: React.ReactNode;
+  align?: "left" | "right";
+}) {
+  return (
+    <details className={`ui-dropdown ui-dropdown-${align}`}>
+      <summary>{label}</summary>
+      <div className="ui-dropdown-menu">{children}</div>
+    </details>
+  );
+}
+
+export function Tabs({
+  items,
+  value,
+  onChange,
+  label = "แท็บ",
+}: {
+  items: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  label?: string;
+}) {
+  const selectAt = (index: number) => {
+    const item = items[(index + items.length) % items.length];
+    if (item) onChange(item.value);
+  };
+
+  return (
+    <div className="ui-tabs" role="tablist" aria-label={label}>
+      {items.map((item, index) => (
+        <Button
+          variant="ghost"
+          key={item.value}
+          role="tab"
+          tabIndex={value === item.value ? 0 : -1}
+          aria-selected={value === item.value}
+          onClick={() => onChange(item.value)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+              event.preventDefault();
+              selectAt(index + 1);
+              const tabs =
+                event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
+                  '[role="tab"]',
+                );
+              tabs?.[(index + 1) % items.length]?.focus();
+            } else if (
+              event.key === "ArrowLeft" ||
+              event.key === "ArrowUp"
+            ) {
+              event.preventDefault();
+              selectAt(index - 1);
+              const tabs =
+                event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
+                  '[role="tab"]',
+                );
+              tabs?.[(index - 1 + items.length) % items.length]?.focus();
+            } else if (event.key === "Home") {
+              event.preventDefault();
+              selectAt(0);
+              event.currentTarget.parentElement
+                ?.querySelector<HTMLElement>('[role="tab"]')
+                ?.focus();
+            } else if (event.key === "End") {
+              event.preventDefault();
+              selectAt(items.length - 1);
+              const tabs =
+                event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
+                  '[role="tab"]',
+                );
+              tabs?.[items.length - 1]?.focus();
+            }
+          }}
+        >
+          {item.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+const ToastContext = createContext<
+  (message: string, tone?: "success" | "danger") => void
+>(() => {});
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toast, setToast] = useState<{
+    message: string;
+    tone: "success" | "danger";
+  }>();
+  const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(
+    () => () => {
+      if (timeout.current) clearTimeout(timeout.current);
+    },
+    [],
+  );
+
+  const dismiss = () => {
+    if (timeout.current) clearTimeout(timeout.current);
+    setToast(undefined);
+  };
+
+  const show = (
+    message: string,
+    tone: "success" | "danger" = "success",
+  ) => {
+    if (timeout.current) clearTimeout(timeout.current);
+    setToast({ message, tone });
+    timeout.current = setTimeout(() => setToast(undefined), 3200);
+  };
+
+  return (
+    <ToastContext.Provider value={show}>
+      {children}
+      {toast && (
+        <div className={`ui-toast ui-toast-${toast.tone}`} role="status">
+          {toast.message}
+          <Button variant="ghost" size="sm" onClick={dismiss}>
+            ปิด
+          </Button>
+        </div>
+      )}
+    </ToastContext.Provider>
+  );
+}
+
 export const useToast = () => useContext(ToastContext);
