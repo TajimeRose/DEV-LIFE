@@ -48,15 +48,13 @@ export async function GET(request: Request, { params }: RouteContext) {
   const { page, limit } = parsed.data;
   const from = page * limit;
   const to = from + limit;
-  const [commits, pullRequests, reviews, syncLogs, deliveries, activities] = await Promise.all([
+  const [commits, pullRequests, reviews, activities] = await Promise.all([
     supabase.from("repository_commits").select("*").eq("repository_id", repositoryId).order("committed_at", { ascending: false, nullsFirst: false }).range(from, to),
     supabase.from("repository_pull_requests").select("*").eq("repository_id", repositoryId).order("updated_at", { ascending: false }).range(from, to),
     supabase.from("repository_pull_request_reviews").select("*,repository_pull_requests!inner(id,repository_id,pull_request_number,title)").eq("repository_pull_requests.repository_id", repositoryId).order("created_at", { ascending: false }).range(from, to),
-    supabase.from("repository_sync_logs").select("*").eq("repository_id", repositoryId).order("started_at", { ascending: false }).range(from, to),
-    supabase.from("github_webhook_deliveries").select("*").eq("repository_id", repositoryId).order("received_at", { ascending: false }).range(from, to),
     supabase.from("project_activity_logs").select("*").eq("project_id", projectId).eq("repository_id", repositoryId).order("occurred_at", { ascending: false }).range(from, to),
   ]);
-  const queryError = commits.error || pullRequests.error || reviews.error || syncLogs.error || deliveries.error || activities.error;
+  const queryError = commits.error || pullRequests.error || reviews.error || activities.error;
   if (queryError) return error(500, "TIMELINE_UNAVAILABLE", "Repository timeline is temporarily unavailable.");
 
   const reviewRows = (reviews.data ?? []).slice(0, limit).map(review => ({
@@ -67,11 +65,11 @@ export async function GET(request: Request, { params }: RouteContext) {
     commits: (commits.data ?? []).slice(0, limit),
     pullRequests: (pullRequests.data ?? []).slice(0, limit),
     reviews: reviewRows,
-    syncLogs: (syncLogs.data ?? []).slice(0, limit),
-    webhookDeliveries: (deliveries.data ?? []).slice(0, limit),
+    syncLogs: [],
+    webhookDeliveries: [],
     activities: (activities.data ?? []).slice(0, limit),
   });
-  const hasMore = [commits.data, pullRequests.data, reviews.data, syncLogs.data, deliveries.data, activities.data]
+  const hasMore = [commits.data, pullRequests.data, reviews.data, activities.data]
     .some(items => (items?.length ?? 0) > limit);
 
   return Response.json({

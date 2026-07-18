@@ -9,7 +9,11 @@ import {
   sortTimelineEvents,
   type TimelineEvent,
 } from "@/lib/github/timeline";
-import { groupTimelineEventsByDate, timelineViewState } from "@/lib/github/timeline-view";
+import {
+  groupTimelineEventsByDate,
+  isVisibleRepositoryActivity,
+  timelineViewState,
+} from "@/lib/github/timeline-view";
 
 type TimelineResponse =
   | {
@@ -117,7 +121,7 @@ export function TimelineLoadingSkeleton() {
 }
 
 export function TimelineEmptyState() {
-  return <Card><EmptyState title="No repository activity yet" description="Synchronize this repository to populate commits, Pull Requests, reviews, and sync history." /></Card>;
+  return <Card><EmptyState title="No repository activity yet" description="Synchronize this repository to load commits, Pull Requests, and reviews." /></Card>;
 }
 
 export function TimelineErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
@@ -467,7 +471,10 @@ export function RepositoryTimeline({
     };
   }, [loadPage, retry]);
 
-  const visibleEvents = useMemo(() => sortTimelineEvents(dedupeTimelineEvents(events)), [events]);
+  const visibleEvents = useMemo(
+    () => sortTimelineEvents(dedupeTimelineEvents(events)).filter(isVisibleRepositoryActivity),
+    [events],
+  );
   const dateGroups = useMemo(() => groupTimelineEventsByDate(visibleEvents), [visibleEvents]);
   const commitCount = visibleEvents.filter(event => event.type === "commit_pushed").length;
   const pullRequestCount = new Set(visibleEvents.flatMap(event => event.pullRequestId ? [event.pullRequestId] : [])).size;
@@ -506,7 +513,7 @@ export function RepositoryTimeline({
         <Link href="/settings/integrations">กลับไปหน้า Repository</Link>
         <small>ประวัติ Repository</small>
         <h1>{repository?.github_full_name ?? "Repository"}</h1>
-        <p>Shared commits, Pull Requests, reviews, and synchronization history from Supabase.</p>
+        <p>Shared commits, Pull Requests, and reviews from Supabase.</p>
       </div>
       <div className="repository-page-actions">
         <Button variant="primary" loading={syncing} onClick={() => void synchronize()}>Sync from GitHub</Button>

@@ -1377,7 +1377,18 @@ kbd {
 
 .flow-canvas-shell,
 .react-flow__pane {
-  background-color: #f7f7f8;
+  background-color: #e1e4e8;
+}
+
+.flow-canvas-shell .react-flow__edge-path,
+.flow-canvas-shell .react-flow__connection-path {
+  stroke: #667085;
+  stroke-width: 1.5;
+}
+
+.flow-canvas-shell .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--brand);
+  stroke-width: 2;
 }
 
 .react-flow__node {

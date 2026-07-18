@@ -2,13 +2,31 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import type { TimelineEvent } from "./timeline.ts";
-import { groupTimelineEventsByDate, timelineViewState } from "./timeline-view.ts";
+import {
+  groupTimelineEventsByDate,
+  isVisibleRepositoryActivity,
+  timelineViewState,
+} from "./timeline-view.ts";
 
 test("timeline loading, error, empty, and populated views are controlled", () => {
   assert.equal(timelineViewState(true, "", 0), "loading");
   assert.equal(timelineViewState(false, "failed", 0), "error");
   assert.equal(timelineViewState(false, "", 0), "empty");
   assert.equal(timelineViewState(false, "", 1), "timeline");
+});
+
+test("repository synchronization events stay out of the user-facing timeline", () => {
+  const commit = event("commit", "2026-07-18T10:00:00+07:00");
+  const syncTypes: TimelineEvent["type"][] = ["sync_started", "sync_succeeded", "sync_failed"];
+  const syncEvents = syncTypes.map(type => ({
+    ...event(type, "2026-07-18T11:00:00+07:00"),
+    type,
+  }));
+
+  assert.deepEqual(
+    [commit, ...syncEvents].filter(isVisibleRepositoryActivity).map(item => item.id),
+    ["commit"],
+  );
 });
 
 test("timeline mobile layout prevents horizontal page overflow", async () => {

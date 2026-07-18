@@ -2,6 +2,10 @@ import { sortTimelineEvents, type TimelineEvent } from "./timeline.ts";
 
 export type TimelineView = "loading" | "error" | "empty" | "timeline";
 
+export function isVisibleRepositoryActivity(event: TimelineEvent) {
+  return !event.type.startsWith("sync_");
+}
+
 export function timelineViewState(loading: boolean, error: string, eventCount: number): TimelineView {
   if (loading) return "loading";
   if (error) return "error";
