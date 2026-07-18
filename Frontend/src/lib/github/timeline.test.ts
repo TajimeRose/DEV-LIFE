@@ -146,7 +146,7 @@ test("synchronization success and failure render as readable events", () => {
     ...emptyRows(),
     syncLogs: [
       { ...base, id: "failed", status: "failed", error_message: "GitHub synchronization failed." },
-      { ...base, id: "success", status: "success", error_message: null },
+      { ...base, id: "completed", status: "completed", error_message: null },
     ],
   });
   assert.deepEqual(events.map(event => event.type).sort(), ["sync_failed", "sync_succeeded"]);

@@ -85,7 +85,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       id: syncLogId,
       repository_id: repositoryId,
       sync_type: "manual",
-      status: "started",
+      status: "running",
       started_at: startedAt,
     }),
   );
@@ -168,7 +168,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     if (syncLog.ok) {
       await optionalDatabaseWrite("finalize_log", () =>
         supabase.from("repository_sync_logs").update({
-          status: "success",
+          status: "completed",
           completed_at: completedAt,
           branches_processed: records.branches.length,
           commits_processed: records.commits.length,
@@ -179,7 +179,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     }
     await optionalDatabaseWrite("finalize_repository", () =>
       supabase.from("project_repositories").update({
-        sync_status: "success",
+        sync_status: "completed",
         last_synced_at: completedAt,
         sync_error: null,
       }).eq("id", repositoryId).eq("project_id", projectId),
@@ -206,7 +206,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     return Response.json({
       data: {
         syncLogId,
-        status: "success",
+        status: "completed",
         branchesProcessed: records.branches.length,
         commitsProcessed: records.commits.length,
         pullRequestsProcessed: records.pullRequests.length,

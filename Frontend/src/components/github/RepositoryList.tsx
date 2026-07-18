@@ -29,7 +29,7 @@ export function RepositoryCard({
       <p>{repository.default_branch ? `Default branch: ${repository.default_branch}` : "Default branch unavailable"}</p>
     </div>
     <div className="connected-repository-status">
-      <Badge tone={repository.sync_status === "failed" ? "danger" : repository.sync_status === "success" ? "success" : "neutral"}>
+      <Badge tone={repository.sync_status === "failed" ? "danger" : repository.sync_status === "completed" ? "success" : "neutral"}>
         {repository.sync_status}
       </Badge>
       {repository.is_private && <Badge tone="warning">Private</Badge>}
