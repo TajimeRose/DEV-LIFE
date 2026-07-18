@@ -9,7 +9,7 @@ import {
   sortTimelineEvents,
   type TimelineEvent,
 } from "@/lib/github/timeline";
-import { timelineViewState } from "@/lib/github/timeline-view";
+import { groupTimelineEventsByDate, timelineViewState } from "@/lib/github/timeline-view";
 
 type TimelineResponse =
   | {
@@ -32,6 +32,16 @@ type PullRequestDetailResponse =
     }
   | { error: { code: string; message: string } };
 
+type SyncResponse =
+  | {
+      data: {
+        commitsProcessed: number;
+        pullRequestsProcessed: number;
+        branchesProcessed: number;
+      };
+    }
+  | { error: { code: string; message: string } };
+
 function isError<T extends { error: { code: string; message: string } }>(value: T | object): value is T {
   return "error" in value;
 }
@@ -45,7 +55,34 @@ function statusTone(status: TimelineEvent["status"]): "neutral" | "success" | "w
 }
 
 function eventLabel(type: TimelineEvent["type"]) {
-  return type.replaceAll("_", " ");
+  const labels: Record<TimelineEvent["type"], string> = {
+    pull_request_opened: "Pull Request opened",
+    pull_request_updated: "Pull Request updated",
+    pull_request_closed: "Pull Request closed",
+    pull_request_merged: "Pull Request merged",
+    commit_pushed: "Commit",
+    review_submitted: "Review submitted",
+    sync_started: "Synchronization",
+    sync_succeeded: "Synchronization",
+    sync_failed: "Synchronization",
+    repository_connected: "Repository",
+  };
+  return labels[type];
+}
+
+function eventIcon(type: TimelineEvent["type"]) {
+  if (type === "commit_pushed") return "●";
+  if (type.startsWith("pull_request_")) return "⑂";
+  if (type === "review_submitted") return "✓";
+  if (type.startsWith("sync_")) return "↻";
+  return "◇";
+}
+
+function eventTime(event: TimelineEvent) {
+  return new Date(event.occurredAt).toLocaleTimeString("th-TH", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function TimelineLoadingSkeleton() {
@@ -64,15 +101,17 @@ export function TimelineErrorState({ message, onRetry }: { message: string; onRe
 
 export function TimelineItem({ event, children }: { event: TimelineEvent; children: React.ReactNode }) {
   return <article className={`repository-timeline-item timeline-${event.type}`}>
-    <div className="timeline-marker" aria-hidden="true" />
-    <small>{new Date(event.occurredAt).toLocaleString("th-TH")}</small>
-    {children}
+    <div className="timeline-marker" aria-hidden="true">{eventIcon(event.type)}</div>
+    <div className="timeline-event-body">{children}</div>
   </article>;
 }
 
 function EventHeader({ event }: { event: TimelineEvent }) {
   return <header>
-    <span>{eventLabel(event.type)}</span>
+    <div>
+      <span>{eventLabel(event.type)}</span>
+      <time dateTime={event.occurredAt}>{eventTime(event)}</time>
+    </div>
     <Badge tone={statusTone(event.status)}>{event.status.replaceAll("_", " ")}</Badge>
   </header>;
 }
@@ -87,13 +126,13 @@ export function PullRequestTimelineCard({
   return <TimelineItem event={event}>
     <button className="timeline-card-button" onClick={() => event.pullRequestId && onOpen(event.pullRequestId)}>
       <EventHeader event={event} />
-      <h3>#{event.pullRequestNumber} {event.title}</h3>
-      <p>{event.actor ? `by ${event.actor}` : "Author unavailable"}</p>
-      <dl>
-        <div><dt>Source</dt><dd>{event.sourceBranch}</dd></div>
-        <div><dt>Target</dt><dd>{event.targetBranch}</dd></div>
-      </dl>
-      <span className="timeline-open-detail">View Pull Request details →</span>
+      <div className="timeline-row-main">
+        <div>
+          <h3>#{event.pullRequestNumber} {event.title}</h3>
+          <p>{event.actor ? `${event.actor} · ` : ""}<span className="timeline-branch">{event.sourceBranch}</span><span className="timeline-branch-arrow">→</span><span className="timeline-branch">{event.targetBranch}</span></p>
+        </div>
+        <span className="timeline-open-detail">View details →</span>
+      </div>
     </button>
   </TimelineItem>;
 }
@@ -108,14 +147,17 @@ export function CommitTimelineCard({
   return <TimelineItem event={event}>
     <button className="timeline-card-button" onClick={() => onOpen(event)}>
       <EventHeader event={event} />
-      <h3>{event.title}</h3>
-      <p>{event.actor ? `by ${event.actor}` : "Commit author unavailable"}</p>
-      <code>{event.commitShortSha}</code>
-      <div className="timeline-diff-stats">
-        <span className="additions">+{event.additions ?? 0}</span>
-        <span className="deletions">−{event.deletions ?? 0}</span>
-        <span>{event.filesChanged ?? 0} files</span>
+      <div className="timeline-row-main">
+        <div>
+          <h3>{event.title}</h3>
+          <p>{event.actor ? `${event.actor} committed` : "Commit author unavailable"}</p>
+        </div>
+        <div className="timeline-row-actions">
+          <code>{event.commitShortSha}</code>
+          <span className="timeline-open-detail">View →</span>
+        </div>
       </div>
+      {event.description && <p className="timeline-description">{event.description}</p>}
     </button>
   </TimelineItem>;
 }
@@ -130,8 +172,13 @@ export function ReviewTimelineCard({
   return <TimelineItem event={event}>
     <button className="timeline-card-button" onClick={() => event.pullRequestId && onOpen(event.pullRequestId)}>
       <EventHeader event={event} />
-      <h3>{event.title}</h3>
-      <p>{event.actor ? `reviewed by ${event.actor}` : "Reviewer unavailable"}</p>
+      <div className="timeline-row-main">
+        <div>
+          <h3>{event.title}</h3>
+          <p>{event.actor ? `Reviewed by ${event.actor}` : "Reviewer unavailable"}</p>
+        </div>
+        <span className="timeline-open-detail">View review →</span>
+      </div>
       {event.description && <blockquote>{event.description}</blockquote>}
     </button>
   </TimelineItem>;
@@ -141,8 +188,12 @@ export function SyncTimelineCard({ event }: { event: TimelineEvent }) {
   return <TimelineItem event={event}>
     <div className="timeline-static-card">
       <EventHeader event={event} />
-      <h3>{event.title}</h3>
-      {event.description && <p>{event.description}</p>}
+      <div className="timeline-row-main">
+        <div>
+          <h3>{event.title}</h3>
+          {event.description && <p>{event.description}</p>}
+        </div>
+      </div>
       {event.errorMessage && <p className="timeline-sync-error" role="status">{event.errorMessage}</p>}
     </div>
   </TimelineItem>;
@@ -320,6 +371,11 @@ export function RepositoryTimeline({
   }, [loadPage, retry]);
 
   const visibleEvents = useMemo(() => sortTimelineEvents(dedupeTimelineEvents(events)), [events]);
+  const dateGroups = useMemo(() => groupTimelineEventsByDate(visibleEvents), [visibleEvents]);
+  const commitCount = visibleEvents.filter(event => event.type === "commit_pushed").length;
+  const pullRequestCount = new Set(visibleEvents.flatMap(event => event.pullRequestId ? [event.pullRequestId] : [])).size;
+  const reviewCount = visibleEvents.filter(event => event.type === "review_submitted").length;
+  const hasGitHubActivity = commitCount + pullRequestCount + reviewCount > 0;
   const view = timelineViewState(loading, error, visibleEvents.length);
   const synchronize = async () => {
     setSyncing(true);
@@ -328,13 +384,16 @@ export function RepositoryTimeline({
       const response = await fetch(`/api/projects/${projectId}/repositories/${repositoryId}/sync`, {
         method: "POST",
       });
-      const payload = await response.json() as { error?: { message: string } };
-      if (!response.ok) {
-        setSyncMessage({ tone: "danger", text: payload.error?.message ?? "Repository synchronization failed." });
+      const payload = await response.json() as SyncResponse;
+      if (!response.ok || isError(payload)) {
+        setSyncMessage({ tone: "danger", text: isError(payload) ? payload.error.message : "Repository synchronization failed." });
         setRetry(value => value + 1);
         return;
       }
-      setSyncMessage({ tone: "success", text: "Repository synchronized successfully." });
+      setSyncMessage({
+        tone: "success",
+        text: `Synchronized ${payload.data.commitsProcessed} commits, ${payload.data.pullRequestsProcessed} Pull Requests, and ${payload.data.branchesProcessed} branches.`,
+      });
       setRetry(value => value + 1);
     } catch {
       setSyncMessage({ tone: "danger", text: "Repository synchronization failed." });
@@ -353,7 +412,7 @@ export function RepositoryTimeline({
         <p>Shared commits, Pull Requests, reviews, and synchronization history from Supabase.</p>
       </div>
       <div className="repository-page-actions">
-        <Button variant="primary" loading={syncing} onClick={() => void synchronize()}>Synchronize</Button>
+        <Button variant="primary" loading={syncing} onClick={() => void synchronize()}>Sync from GitHub</Button>
         {repository?.github_url && <a className="view-board" href={repository.github_url} target="_blank" rel="noreferrer noopener">Open GitHub ↗</a>}
       </div>
     </header>
@@ -362,14 +421,37 @@ export function RepositoryTimeline({
     {view === "loading" && <TimelineLoadingSkeleton />}
     {view === "error" && <TimelineErrorState message={error} onRetry={() => setRetry(value => value + 1)} />}
     {view === "empty" && <TimelineEmptyState />}
-    {view === "timeline" && <div className="repository-timeline-scroll" aria-label="Repository timeline">
-      {visibleEvents.map(event => {
-        if (event.type.startsWith("pull_request_")) return <PullRequestTimelineCard key={event.id} event={event} onOpen={setSelectedPullRequest} />;
-        if (event.type === "commit_pushed") return <CommitTimelineCard key={event.id} event={event} onOpen={setSelectedCommit} />;
-        if (event.type === "review_submitted") return <ReviewTimelineCard key={event.id} event={event} onOpen={setSelectedPullRequest} />;
-        return <SyncTimelineCard key={event.id} event={event} />;
-      })}
-    </div>}
+    {view === "timeline" && <>
+      <section className="repository-timeline-summary" aria-label="Repository activity summary">
+        <div><span>Default branch</span><strong>{repository?.default_branch ?? "—"}</strong></div>
+        <div><span>Commits loaded</span><strong>{commitCount}</strong></div>
+        <div><span>Pull Requests</span><strong>{pullRequestCount}</strong></div>
+        <div><span>Reviews</span><strong>{reviewCount}</strong></div>
+      </section>
+      {!hasGitHubActivity && <Card className="timeline-sync-prompt">
+        <div><strong>ยังไม่พบ commit จาก GitHub</strong><p>กด Sync from GitHub เพื่อดึง commit, Pull Request และ review ล่าสุดมาแสดงใน timeline</p></div>
+        <Button variant="primary" loading={syncing} onClick={() => void synchronize()}>Sync now</Button>
+      </Card>}
+      <section className="repository-history-panel" aria-labelledby="repository-history-title">
+        <header className="repository-history-header">
+          <div><small>REPOSITORY HISTORY</small><h2 id="repository-history-title">Activity</h2></div>
+          <Badge tone="neutral">{visibleEvents.length} events</Badge>
+        </header>
+        <div className="repository-timeline-scroll" aria-label="Repository timeline">
+          {dateGroups.map(group => <section className="timeline-date-group" key={group.key}>
+            <header className="timeline-date-heading"><span aria-hidden="true" /><h3>Activity on {group.label}</h3></header>
+            <div className="timeline-date-events">
+              {group.events.map(event => {
+                if (event.type.startsWith("pull_request_")) return <PullRequestTimelineCard key={event.id} event={event} onOpen={setSelectedPullRequest} />;
+                if (event.type === "commit_pushed") return <CommitTimelineCard key={event.id} event={event} onOpen={setSelectedCommit} />;
+                if (event.type === "review_submitted") return <ReviewTimelineCard key={event.id} event={event} onOpen={setSelectedPullRequest} />;
+                return <SyncTimelineCard key={event.id} event={event} />;
+              })}
+            </div>
+          </section>)}
+        </div>
+      </section>
+    </>}
     {view === "timeline" && hasMore && <div className="github-load-more"><Button loading={loadingMore} onClick={() => void loadPage(page + 1)}>Load more activity</Button></div>}
 
     <PullRequestDetail projectId={projectId} repositoryId={repositoryId} pullRequestId={selectedPullRequest} onClose={() => setSelectedPullRequest(undefined)} />
