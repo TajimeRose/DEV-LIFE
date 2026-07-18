@@ -13,7 +13,56 @@ export function Loading({ label = "กำลังโหลด…", fullPage = f
 export function EmptyState({ title, description, action }: { title: string; description?: string; action?: React.ReactNode }) { return <div className="ui-empty"><span aria-hidden="true">◇</span><h2>{title}</h2>{description && <p>{description}</p>}{action}</div>; }
 export function PageHeader({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: React.ReactNode }) { return <header className="ui-page-header"><div>{eyebrow && <span>{eyebrow}</span>}<h1>{title}</h1>{description && <p>{description}</p>}</div>{action && <div className="ui-page-actions">{action}</div>}</header>; }
 export function FormField({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactElement<{ id?: string; "aria-describedby"?: string }> }) { const generatedId = useId(); const errorId = `${generatedId}-error`; const control = isValidElement(children) ? cloneElement(children, { id: children.props.id || generatedId, "aria-describedby": error ? errorId : children.props["aria-describedby"] }) : children; return <div className="ui-field"><label htmlFor={children.props.id || generatedId}><span>{label}</span>{hint && <small>{hint}</small>}</label>{control}{error && <em id={errorId} role="alert">{error}</em>}</div>; }
-export function Modal({ open, onClose, title, description, children, footer }: { open: boolean; onClose: () => void; title: string; description?: string; children: React.ReactNode; footer?: React.ReactNode }) { const ref = useRef<HTMLDivElement>(null); const titleId = useId(); const descriptionId = useId(); useEffect(() => { if (!open) return; const previous = document.activeElement as HTMLElement | null; ref.current?.focus(); const key = (event: KeyboardEvent) => event.key === "Escape" && onClose(); document.addEventListener("keydown", key); return () => { document.removeEventListener("keydown", key); previous?.focus(); }; }, [open, onClose]); if (!open) return null; return <div className="ui-modal-layer" role="presentation" onMouseDown={onClose}><div ref={ref} tabIndex={-1} className="ui-modal" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} onMouseDown={event => event.stopPropagation()}><header><div><h2 id={titleId}>{title}</h2>{description && <p id={descriptionId}>{description}</p>}</div><Button variant="ghost" size="sm" aria-label="ปิด" onClick={onClose}>×</Button></header><div className="ui-modal-body">{children}</div>{footer && <footer>{footer}</footer>}</div></div>; }
+export function Modal({ open, onClose, title, description, children, footer }: { open: boolean; onClose: () => void; title: string; description?: string; children: React.ReactNode; footer?: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const currentPaddingRight = Number.parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
+    const key = (event: KeyboardEvent) => event.key === "Escape" && onClose();
+
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${currentPaddingRight + scrollbarWidth}px`;
+    }
+    ref.current?.focus();
+    document.addEventListener("keydown", key);
+
+    return () => {
+      document.removeEventListener("keydown", key);
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+      previousFocus?.focus();
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return <div className="ui-modal-layer" role="presentation" onMouseDown={onClose}>
+    <div
+      ref={ref}
+      tabIndex={-1}
+      className="ui-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
+      onMouseDown={event => event.stopPropagation()}
+    >
+      <header>
+        <div><h2 id={titleId}>{title}</h2>{description && <p id={descriptionId}>{description}</p>}</div>
+        <Button variant="ghost" size="sm" aria-label="ปิด" onClick={onClose}>×</Button>
+      </header>
+      <div className="ui-modal-body">{children}</div>
+      {footer && <footer>{footer}</footer>}
+    </div>
+  </div>;
+}
 export function Dropdown({ label, children, align = "right" }: { label: React.ReactNode; children: React.ReactNode; align?: "left" | "right" }) { return <details className={`ui-dropdown ui-dropdown-${align}`}><summary>{label}</summary><div className="ui-dropdown-menu">{children}</div></details>; }
 export function Tabs({ items, value, onChange, label = "แท็บ" }: { items: { value: string; label: string }[]; value: string; onChange: (value: string) => void; label?: string }) { return <div className="ui-tabs" role="tablist" aria-label={label}>{items.map(item => <Button variant="ghost" key={item.value} role="tab" aria-selected={value === item.value} onClick={() => onChange(item.value)}>{item.label}</Button>)}</div>; }
 const ToastContext = createContext<(message: string, tone?: "success" | "danger") => void>(() => {});
