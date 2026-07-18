@@ -42,6 +42,31 @@ type SyncResponse =
     }
   | { error: { code: string; message: string } };
 
+type CommitDetailResponse =
+  | {
+      data: {
+        sha: string;
+        stats: {
+          additions: number;
+          deletions: number;
+          total: number;
+          filesChanged: number;
+        };
+        files: Array<{
+          filename: string;
+          previousFilename: string | null;
+          status: string;
+          additions: number;
+          deletions: number;
+          changes: number;
+          blobUrl: string | null;
+          patch: string | null;
+          patchTruncated: boolean;
+        }>;
+      };
+    }
+  | { error: { code: string; message: string } };
+
 function isError<T extends { error: { code: string; message: string } }>(value: T | object): value is T {
   return "error" in value;
 }
@@ -200,12 +225,57 @@ export function SyncTimelineCard({ event }: { event: TimelineEvent }) {
 }
 
 export function CommitDetail({
+  projectId,
+  repositoryId,
   event,
   onClose,
 }: {
+  projectId: string;
+  repositoryId: string;
   event?: TimelineEvent;
   onClose: () => void;
 }) {
+  const [detail, setDetail] = useState<Extract<CommitDetailResponse, { data: unknown }>["data"]>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    const commitSha = event?.commitSha;
+    if (!commitSha) return;
+    const controller = new AbortController();
+    const load = async () => {
+      await Promise.resolve();
+      setLoading(true);
+      setError("");
+      setDetail(undefined);
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/repositories/${repositoryId}/commits/${encodeURIComponent(commitSha)}`,
+          { cache: "no-store", signal: controller.signal },
+        );
+        const payload = await response.json() as CommitDetailResponse;
+        if (!response.ok || isError(payload)) {
+          setError(isError(payload) ? payload.error.message : "Unable to load commit details.");
+          return;
+        }
+        setDetail(payload.data);
+      } catch (cause) {
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+        setError("Unable to load commit details.");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    };
+    void load();
+    return () => controller.abort();
+  }, [event?.commitSha, projectId, repositoryId, retry]);
+
+  const activeDetail = detail?.sha === event?.commitSha ? detail : undefined;
+  const additions = activeDetail?.stats.additions ?? event?.additions ?? 0;
+  const deletions = activeDetail?.stats.deletions ?? event?.deletions ?? 0;
+  const filesChanged = activeDetail?.stats.filesChanged ?? event?.filesChanged ?? 0;
+
   return <Modal
     open={Boolean(event)}
     onClose={onClose}
@@ -217,11 +287,38 @@ export function CommitDetail({
       <p>{event.actor ? `Committed by ${event.actor}` : "Commit author unavailable"}</p>
       <dl>
         <div><dt>SHA</dt><dd><code>{event.commitSha}</code></dd></div>
-        <div><dt>Files changed</dt><dd>{event.filesChanged ?? 0}</dd></div>
-        <div><dt>Additions</dt><dd>+{event.additions ?? 0}</dd></div>
-        <div><dt>Deletions</dt><dd>−{event.deletions ?? 0}</dd></div>
+        <div><dt>Files changed</dt><dd>{filesChanged}</dd></div>
+        <div><dt>Additions</dt><dd>+{additions}</dd></div>
+        <div><dt>Deletions</dt><dd>−{deletions}</dd></div>
       </dl>
-      <Card className="diff-unavailable"><h3>Diff unavailable</h3><p>The current schema does not store commit diff content, and no secure on-demand diff integration exists.</p></Card>
+      {loading && <div className="commit-detail-loading" role="status">Loading changed files from GitHub…</div>}
+      {!loading && error && <Card className="commit-detail-error">
+        <h3>Commit changes unavailable</h3>
+        <p role="alert">{error}</p>
+        <Button onClick={() => setRetry(value => value + 1)}>Retry</Button>
+      </Card>}
+      {!loading && activeDetail && <section className="commit-file-list">
+        <h3>Changed files ({activeDetail.files.length})</h3>
+        {activeDetail.files.map(file => <article key={file.filename}>
+          <header>
+            <div>
+              {file.blobUrl
+                ? <a href={file.blobUrl} target="_blank" rel="noreferrer noopener">{file.filename}</a>
+                : <strong>{file.filename}</strong>}
+              {file.previousFilename && <small>renamed from {file.previousFilename}</small>}
+            </div>
+            <div>
+              <Badge tone="neutral">{file.status}</Badge>
+              <span className="additions">+{file.additions}</span>
+              <span className="deletions">−{file.deletions}</span>
+            </div>
+          </header>
+          {file.patch
+            ? <pre><code>{file.patch}{file.patchTruncated ? "\n… patch truncated" : ""}</code></pre>
+            : <p>No textual patch is available for this file.</p>}
+        </article>)}
+        {!activeDetail.files.length && <p className="empty-copy">GitHub reported no changed files for this commit.</p>}
+      </section>}
       {event.githubUrl && <a href={event.githubUrl} target="_blank" rel="noreferrer noopener">Open commit on GitHub ↗</a>}
     </div>}
   </Modal>;
@@ -455,6 +552,11 @@ export function RepositoryTimeline({
     {view === "timeline" && hasMore && <div className="github-load-more"><Button loading={loadingMore} onClick={() => void loadPage(page + 1)}>Load more activity</Button></div>}
 
     <PullRequestDetail projectId={projectId} repositoryId={repositoryId} pullRequestId={selectedPullRequest} onClose={() => setSelectedPullRequest(undefined)} />
-    <CommitDetail event={selectedCommit} onClose={() => setSelectedCommit(undefined)} />
+    <CommitDetail
+      projectId={projectId}
+      repositoryId={repositoryId}
+      event={selectedCommit}
+      onClose={() => setSelectedCommit(undefined)}
+    />
   </>;
 }
