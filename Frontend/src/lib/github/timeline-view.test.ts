@@ -42,6 +42,15 @@ test("long modal content scrolls inside the dialog", async () => {
   assert.match(css, /\.ui-modal-layer\s*\{[^}]*overscroll-behavior:\s*contain[;}]/);
 });
 
+test("canonical repository workspace CSS stays namespaced and responsive", async () => {
+  const css = await readFile(new URL("../../app/swiss.css", import.meta.url), "utf8");
+  assert.match(css, /\.repository-workspace\s*\{/);
+  assert.match(css, /\.repo-ws-tabs\s*\{[^}]*overflow-x:\s*auto;/);
+  assert.match(css, /\.repo-ws-source\s*\{[^}]*overflow:\s*auto;/);
+  assert.match(css, /\.repo-ws-content p,[\s\S]*?overflow-wrap:\s*anywhere;/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.repo-ws-task-grid\s*\{\s*grid-template-columns:\s*1fr;/);
+});
+
 function event(id: string, occurredAt: string): TimelineEvent {
   return {
     id,

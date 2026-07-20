@@ -1,4 +1,5 @@
-import { RepositoryTimeline } from "@/components/github/RepositoryTimeline";
+import { RepositoryWorkspace } from "@/components/github/RepositoryWorkspace";
+import { getCurrentWorkspace } from "@/lib/current-workspace";
 
 export default async function RepositoryPage({
   params,
@@ -6,5 +7,10 @@ export default async function RepositoryPage({
   params: Promise<{ projectId: string; repositoryId: string }>;
 }) {
   const { projectId, repositoryId } = await params;
-  return <RepositoryTimeline projectId={projectId} repositoryId={repositoryId} />;
+  const { project } = await getCurrentWorkspace();
+  return <RepositoryWorkspace
+    projectId={projectId}
+    repositoryId={repositoryId}
+    projectName={project?.id === projectId ? project.name : undefined}
+  />;
 }

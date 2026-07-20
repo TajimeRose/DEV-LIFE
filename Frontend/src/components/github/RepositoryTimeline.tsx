@@ -14,6 +14,7 @@ import {
   isVisibleRepositoryActivity,
   timelineViewState,
 } from "@/lib/github/timeline-view";
+import { safeGitHubUrl } from "@/lib/github/repository-workspace";
 
 type TimelineResponse =
   | {
@@ -276,9 +277,9 @@ export function CommitDetail({
   }, [event?.commitSha, projectId, repositoryId, retry]);
 
   const activeDetail = detail?.sha === event?.commitSha ? detail : undefined;
-  const additions = activeDetail?.stats.additions ?? event?.additions ?? 0;
-  const deletions = activeDetail?.stats.deletions ?? event?.deletions ?? 0;
-  const filesChanged = activeDetail?.stats.filesChanged ?? event?.filesChanged ?? 0;
+  const additions = activeDetail?.stats.additions;
+  const deletions = activeDetail?.stats.deletions;
+  const filesChanged = activeDetail?.stats.filesChanged;
 
   return <Modal
     open={Boolean(event)}
@@ -291,9 +292,9 @@ export function CommitDetail({
       <p>{event.actor ? `Committed by ${event.actor}` : "Commit author unavailable"}</p>
       <dl>
         <div><dt>SHA</dt><dd><code>{event.commitSha}</code></dd></div>
-        <div><dt>Files changed</dt><dd>{filesChanged}</dd></div>
-        <div><dt>Additions</dt><dd>+{additions}</dd></div>
-        <div><dt>Deletions</dt><dd>−{deletions}</dd></div>
+        <div><dt>Files changed</dt><dd>{filesChanged ?? (loading ? "Loading…" : "Unavailable")}</dd></div>
+        <div><dt>Additions</dt><dd>{additions === undefined ? (loading ? "Loading…" : "Unavailable") : `+${additions}`}</dd></div>
+        <div><dt>Deletions</dt><dd>{deletions === undefined ? (loading ? "Loading…" : "Unavailable") : `−${deletions}`}</dd></div>
       </dl>
       {loading && <div className="commit-detail-loading" role="status">Loading changed files from GitHub…</div>}
       {!loading && error && <Card className="commit-detail-error">
@@ -306,8 +307,8 @@ export function CommitDetail({
         {activeDetail.files.map(file => <article key={file.filename}>
           <header>
             <div>
-              {file.blobUrl
-                ? <a href={file.blobUrl} target="_blank" rel="noreferrer noopener">{file.filename}</a>
+              {safeGitHubUrl(file.blobUrl)
+                ? <a href={safeGitHubUrl(file.blobUrl) ?? undefined} target="_blank" rel="noreferrer noopener">{file.filename}</a>
                 : <strong>{file.filename}</strong>}
               {file.previousFilename && <small>renamed from {file.previousFilename}</small>}
             </div>
@@ -323,7 +324,7 @@ export function CommitDetail({
         </article>)}
         {!activeDetail.files.length && <p className="empty-copy">GitHub reported no changed files for this commit.</p>}
       </section>}
-      {event.githubUrl && <a href={event.githubUrl} target="_blank" rel="noreferrer noopener">เปิด Commit บน GitHub</a>}
+       {safeGitHubUrl(event.githubUrl) && <a href={safeGitHubUrl(event.githubUrl) ?? undefined} target="_blank" rel="noreferrer noopener">เปิด Commit บน GitHub</a>}
     </div>}
   </Modal>;
 }
@@ -409,7 +410,7 @@ export function PullRequestDetail({
         {!activeDetail.reviews.length && <p className="empty-copy">No reviews have been synchronized.</p>}
       </section>
       <Card className="diff-unavailable"><h3>Related commits and diff unavailable</h3><p>{activeDetail.diff.reason}</p></Card>
-      {pullRequest.github_url && <a href={pullRequest.github_url} target="_blank" rel="noreferrer noopener">เปิด Pull Request บน GitHub</a>}
+      {safeGitHubUrl(pullRequest.github_url) && <a href={safeGitHubUrl(pullRequest.github_url) ?? undefined} target="_blank" rel="noreferrer noopener">เปิด Pull Request บน GitHub</a>}
     </div>}
   </Modal>;
 }
@@ -517,7 +518,7 @@ export function RepositoryTimeline({
       </div>
       <div className="repository-page-actions">
         <Button variant="primary" loading={syncing} onClick={() => void synchronize()}>Sync from GitHub</Button>
-        {repository?.github_url && <a className="view-board" href={repository.github_url} target="_blank" rel="noreferrer noopener">เปิดบน GitHub</a>}
+        {safeGitHubUrl(repository?.github_url) && <a className="view-board" href={safeGitHubUrl(repository?.github_url) ?? undefined} target="_blank" rel="noreferrer noopener">เปิดบน GitHub</a>}
       </div>
     </header>
     {syncMessage && <p className={syncMessage.tone === "success" ? "form-success" : "form-error"} role={syncMessage.tone === "success" ? "status" : "alert"}>{syncMessage.text}</p>}
