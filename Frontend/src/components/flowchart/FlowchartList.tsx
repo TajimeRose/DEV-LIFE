@@ -5,6 +5,7 @@ import { FormEvent, useState, useTransition } from "react";
 import { createFlowchartInline, deleteFlowchart, duplicateFlowchart, renameFlowchart } from "@/app/actions/flowcharts";
 import { Button, Card, EmptyState, FormField, Input, Modal, Textarea, useToast } from "@/components/ui";
 import type { FlowchartRecord } from "@/lib/flowchart/flowchart-types";
+import { useProjectRealtime } from "@/lib/realtime/use-project-realtime";
 import { FlowchartEditor } from "./FlowchartEditor";
 
 export function FlowchartList({ projectId, flowcharts, initialCreate = false }: { projectId: string; flowcharts: FlowchartRecord[]; initialCreate?: boolean }) {
@@ -13,6 +14,7 @@ export function FlowchartList({ projectId, flowcharts, initialCreate = false }: 
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const toast = useToast();
+  useProjectRealtime("flowcharts", projectId, () => router.refresh());
   const mutate = (action: () => Promise<void>, message: string) => startTransition(async () => { try { await action(); toast(message); setRenameTarget(undefined); router.refresh(); } catch (error) { toast(error instanceof Error ? error.message : "ทำรายการไม่สำเร็จ", "danger"); } });
   const create = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

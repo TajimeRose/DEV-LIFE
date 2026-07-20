@@ -9,6 +9,9 @@ import { autoLayout } from "@/lib/flowchart/flowchart-layout";
 import { defaultViewport, freshDefaultEdges, freshDefaultNodes } from "@/lib/flowchart/default-flowchart";
 import { saveFlowchart } from "@/lib/flowchart/flowchart-service";
 import type { FlowEdge, FlowNode, FlowNodeType, FlowchartRecord, FlowViewport, SaveStatus } from "@/lib/flowchart/flowchart-types";
+import { toFlowchartRecord } from "@/lib/flowchart/flowchart-types";
+import { createClient } from "@/lib/supabase/client";
+import { useProjectRealtime } from "@/lib/realtime/use-project-realtime";
 import { FlowchartPropertiesPanel } from "./FlowchartPropertiesPanel";
 import { FlowchartSaveStatus } from "./FlowchartSaveStatus";
 import { FlowchartToolbar } from "./FlowchartToolbar";
@@ -62,11 +65,26 @@ function Editor({ flowchart, embedded = false, onClose }: { flowchart: Flowchart
   const [editValue, setEditValue] = useState("");
   const toast = useToast();
   const ready = useRef(false), savedName = useRef(flowchart.name), history = useRef<Snapshot[]>([]), future = useRef<Snapshot[]>([]);
+  const statusRef = useRef(status);
   const selectedNode = nodes.find(node => node.selected);
   const selectedEdge = edges.find(edge => edge.selected);
 
   const snapshot = useCallback(() => { history.current.push({ nodes: structuredClone(nodes), edges: structuredClone(edges) }); if (history.current.length > 50) history.current.shift(); future.current = []; }, [nodes, edges]);
   const save = useCallback(async () => { if (!name.trim()) { setStatus("error"); return false; } setStatus("saving"); try { await saveFlowchart({ id: flowchart.id, project_id: flowchart.project_id!, name, description, nodes, edges, viewport }); if (savedName.current !== name.trim()) { await renameFlowchart(flowchart.project_id!, flowchart.id, name); savedName.current = name.trim(); } setStatus("saved"); return true; } catch { setStatus("error"); return false; } }, [description, edges, flowchart.id, flowchart.project_id, name, nodes, viewport]);
+
+  useEffect(() => { statusRef.current = status; }, [status]);
+  useProjectRealtime("flowcharts", flowchart.project_id!, () => void (async () => {
+    if (statusRef.current !== "saved") return;
+    const { data } = await createClient().from("flowcharts").select("*").eq("id", flowchart.id).eq("project_id", flowchart.project_id!).maybeSingle();
+    if (!data) return;
+    const remote = toFlowchartRecord(data);
+    setNodes(remote.nodes);
+    setEdges(normalizeDecisionHandles(remote.nodes, remote.edges));
+    setViewport(remote.viewport);
+    setName(remote.name);
+    setDescription(remote.description ?? "");
+    savedName.current = remote.name;
+  })());
 
   useEffect(() => { if (!ready.current) { ready.current = true; return; } setStatus("unsaved"); const timer = window.setTimeout(save, 1000); return () => window.clearTimeout(timer); }, [nodes, edges, viewport, name, description, save]);
 

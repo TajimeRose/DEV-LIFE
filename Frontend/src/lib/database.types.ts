@@ -285,6 +285,82 @@ export type Database = {
           },
         ]
       }
+      project_activity_tracking: {
+        Row: {
+          current_page: string | null
+          id: string
+          last_active_at: string | null
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          current_page?: string | null
+          id?: string
+          last_active_at?: string | null
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          current_page?: string | null
+          id?: string
+          last_active_at?: string | null
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_activity_tracking_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_invitations: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          invited_by: string
+          invited_email: string
+          project_id: string
+          role: string
+          status: string
+          token: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          invited_by: string
+          invited_email: string
+          project_id: string
+          role?: string
+          status?: string
+          token: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          invited_by?: string
+          invited_email?: string
+          project_id?: string
+          role?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           created_at: string
@@ -872,7 +948,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_project_invitation: {
+        Args: { invitation_token: string }
+        Returns: string
+      }
+      can_edit_project: {
+        Args: { target_project_id: string }
+        Returns: boolean
+      }
+      is_project_member: {
+        Args: { target_project_id: string }
+        Returns: boolean
+      }
+      is_project_owner: {
+        Args: { target_project_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

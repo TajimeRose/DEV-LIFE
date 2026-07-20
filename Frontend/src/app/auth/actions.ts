@@ -29,7 +29,7 @@ export async function login(_state: LoginState, formData: FormData): Promise<Log
   if (!result.success) return { error: "กรุณาตรวจสอบอีเมลและรหัสผ่าน" };
   const { error } = await (await createClient()).auth.signInWithPassword(result.data);
   if (error) return { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" };
-  redirect("/projects");
+  redirect(safeAuthRedirect(formData.get("next")?.toString()));
 }
 
 export async function register(_state: RegisterState, formData: FormData): Promise<RegisterState> {
@@ -39,14 +39,14 @@ export async function register(_state: RegisterState, formData: FormData): Promi
   const { data, error } = await (await createClient()).auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: callbackUrl() },
+    options: { emailRedirectTo: callbackUrl(formData.get("next")?.toString()) },
   });
   if (error) return { error: "ไม่สามารถสมัครสมาชิกได้ กรุณาตรวจสอบข้อมูลหรือลองใหม่อีกครั้ง" };
-  if (data.session) redirect("/projects");
+  if (data.session) redirect(safeAuthRedirect(formData.get("next")?.toString()));
   return { success: "สมัครสมาชิกสำเร็จ กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชีก่อนเข้าสู่ระบบ" };
 }
 
-async function startGitHubOAuth(next: "/projects" | "/settings/integrations") {
+async function startGitHubOAuth(next: string) {
   const scopes = githubOAuthScopes();
   const { data, error } = await (await createClient()).auth.signInWithOAuth({
     provider: "github",
@@ -60,9 +60,9 @@ async function startGitHubOAuth(next: "/projects" | "/settings/integrations") {
   redirect(data.url);
 }
 
-export async function signInWithGitHub(_state: GitHubAuthState): Promise<GitHubAuthState> {
+export async function signInWithGitHub(_state: GitHubAuthState, formData: FormData): Promise<GitHubAuthState> {
   void _state;
-  const result = await startGitHubOAuth("/projects");
+  const result = await startGitHubOAuth(safeAuthRedirect(formData.get("next")?.toString()));
   if (result === null) return { error: "ไม่สามารถเชื่อมต่อ GitHub ได้ กรุณาลองใหม่อีกครั้ง" };
   return null;
 }

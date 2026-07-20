@@ -6,6 +6,6 @@ export async function saveFlowchart(input: { id: string; project_id: string; nam
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("กรุณาเข้าสู่ระบบอีกครั้ง");
-  const { error } = await supabase.from("flowcharts").update({ name: input.name.trim(), description: input.description.trim() || null, nodes: input.nodes as unknown as Json, edges: input.edges as unknown as Json, viewport: input.viewport as unknown as Json, updated_at: new Date().toISOString() }).eq("id", input.id).eq("project_id", input.project_id).eq("user_id", user.id);
+  const { error } = await supabase.from("flowcharts").update({ name: input.name.trim(), description: input.description.trim() || null, nodes: input.nodes as unknown as Json, edges: input.edges as unknown as Json, viewport: input.viewport as unknown as Json, updated_at: new Date().toISOString() }).eq("id", input.id).eq("project_id", input.project_id);
   if (error) throw new Error(error.message);
 }

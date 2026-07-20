@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { createNote, createProject, createTask, updateNote, updateTask } from "@/app/actions/data";
+import { createNote, createProject, createTask, getNotes, getTasks, updateNote, updateTask } from "@/app/actions/data";
 import { Badge, Button, Card, EmptyState, FormField, Input, Modal, Select, Textarea, useToast } from "@/components/ui";
 import type { Tables } from "@/lib/database.types";
+import { canEditProject } from "@/lib/projects/permissions";
+import { useProjectRealtime } from "@/lib/realtime/use-project-realtime";
 
 type Activity = Tables<"activities">;
 type Note = Tables<"notes">;
@@ -55,12 +57,15 @@ function priorityClass(priority: string) {
   return "priority-normal";
 }
 
-export function ConnectedTasks({ project, initial }: { project: Project; initial: Task[] }) {
+export function ConnectedTasks({ project, initial, role = "owner" }: { project: Project; initial: Task[]; role?: string }) {
   const [tasks, setTasks] = useState(initial);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState("ทั่วไป");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
+  const editable = canEditProject(role);
+  void editable;
+  useProjectRealtime("tasks", project.id, () => void getTasks(project.id).then(setTasks));
   const add = (event: FormEvent) => {
     event.preventDefault();
     if (!title.trim()) return;
@@ -107,7 +112,7 @@ export function ConnectedTasks({ project, initial }: { project: Project; initial
 
 function noteText(content: Note["content"]) { return typeof content === "string" ? content : JSON.stringify(content, null, 2); }
 
-export function ConnectedNotes({ project, initial }: { project: Project; initial: Note[] }) {
+export function ConnectedNotes({ project, initial, role = "owner" }: { project: Project; initial: Note[]; role?: string }) {
   const [notes, setNotes] = useState(initial);
   const [selectedId, setSelectedId] = useState(initial[0]?.id ?? "");
   const [savedSnapshots, setSavedSnapshots] = useState(() => Object.fromEntries(initial.map(note => [note.id, `${note.title}\n${noteText(note.content)}`])));
@@ -118,8 +123,15 @@ export function ConnectedNotes({ project, initial }: { project: Project; initial
   const [error, setError] = useState("");
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const toast = useToast();
+  const editable = canEditProject(role);
+  void editable;
   const snapshot = selected ? `${selected.title}\n${noteText(selected.content)}` : "";
   const dirty = Boolean(selected && savedSnapshots[selected.id] !== snapshot);
+  useProjectRealtime("notes", project.id, () => void getNotes(project.id).then(next => {
+    if (dirty) return;
+    setNotes(next);
+    setSavedSnapshots(Object.fromEntries(next.map(note => [note.id, `${note.title}\n${noteText(note.content)}`])));
+  }));
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
     window.addEventListener("beforeunload", beforeUnload);
@@ -203,7 +215,7 @@ export function ConnectedActivity({ project, activities, repositoryActivities = 
   return <><div className="heading"><div><small>กิจกรรม</small><h1>{project.name}</h1><p>ประวัติการเปลี่ยนแปลงของโปรเจกต์</p></div></div><section className="panel feature-panel"><div className="timeline">{items.map(item => <div key={item.id}><span /><section><b>{item.title}</b><small>{item.date ? new Date(item.date).toLocaleString("th-TH") : "ไม่ทราบเวลา"}</small></section></div>)}{!items.length && <p className="empty-copy">ยังไม่มีกิจกรรม</p>}</div></section></>;
 }
 
-export function ConnectedBoard({ project, initial }: { project: Project; initial: Task[] }) {
+export function ConnectedBoard({ project, initial, role = "owner" }: { project: Project; initial: Task[]; role?: string }) {
   const statuses = ["todo", "in_progress", "review", "done"] as const;
   const labels = { todo: "รอทำ", in_progress: "กำลังทำ", review: "ตรวจสอบ", done: "เสร็จแล้ว" };
   const [tasks, setTasks] = useState(initial);
@@ -211,6 +223,9 @@ export function ConnectedBoard({ project, initial }: { project: Project; initial
   const [over, setOver] = useState("");
   const [error, setError] = useState("");
   const [, startTransition] = useTransition();
+  const editable = canEditProject(role);
+  void editable;
+  useProjectRealtime("tasks", project.id, () => void getTasks(project.id).then(setTasks));
   const move = (taskId: string, status: string) => {
     const task = tasks.find(item => item.id === taskId);
     if (!task || task.status === status) return;

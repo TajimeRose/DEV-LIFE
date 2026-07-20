@@ -14,11 +14,11 @@ function GitHubSubmit({ label }: { label: string }) {
   </Button>;
 }
 
-export function GitHubAuthButton({ label }: { label: string }) {
+export function GitHubAuthButton({ label, next }: { label: string; next?: string }) {
   const [state, action] = useActionState(signInWithGitHub, null);
 
   return <div className="auth-oauth">
-    <form action={action}><GitHubSubmit label={label} /></form>
+    <form action={action}>{next && <input type="hidden" name="next" value={next} />}<GitHubSubmit label={label} /></form>
     {state?.error && <p className="auth-error" role="alert">{state.error}</p>}
   </div>;
 }

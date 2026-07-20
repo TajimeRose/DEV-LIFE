@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useActionState } from "react";
+import { use, useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { register } from "@/app/auth/actions";
 import { GitHubAuthButton } from "@/components/auth/GitHubAuthButton";
@@ -18,8 +18,9 @@ function SubmitButton() {
   );
 }
 
-export default function RegisterPage() {
+export default function RegisterPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const [state, formAction] = useActionState(register, null);
+  const params = use(searchParams);
 
   return (
     <main className="auth-shell">
@@ -42,6 +43,7 @@ export default function RegisterPage() {
           <h2>สมัครสมาชิก</h2>
           <p className="auth-description">สร้างบัญชีเพื่อเริ่มพื้นที่ทำงานของคุณ</p>
           <form className="auth-form" action={formAction}>
+            {params.next && <input type="hidden" name="next" value={params.next} />}
             {state?.error && <p className="auth-error" role="alert">{state.error}</p>}
             {state?.success && <p className="auth-success" role="status">{state.success}</p>}
             <FormField label="อีเมล"><Input name="email" type="email" autoComplete="email" placeholder="name@example.com" required /></FormField>
@@ -50,8 +52,8 @@ export default function RegisterPage() {
             <SubmitButton />
           </form>
           <div className="auth-divider"><span>หรือ</span></div>
-          <GitHubAuthButton label="สมัครสมาชิกด้วย GitHub" />
-          <p className="auth-switch">มีบัญชีอยู่แล้ว? <Link href="/login">เข้าสู่ระบบ</Link></p>
+          <GitHubAuthButton label="สมัครสมาชิกด้วย GitHub" next={params.next} />
+          <p className="auth-switch">มีบัญชีอยู่แล้ว? <Link href={params.next ? `/login?next=${encodeURIComponent(params.next)}` : "/login"}>เข้าสู่ระบบ</Link></p>
         </Card>
         <p className="auth-copyright">© 2026 DEV LIFE · พื้นที่ทำงานสำหรับนักพัฒนา</p>
       </section>

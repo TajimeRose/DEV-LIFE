@@ -6,6 +6,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { defaultViewport } from "@/lib/flowchart/default-flowchart";
 import { toFlowchartRecord } from "@/lib/flowchart/flowchart-types";
+import { authorizeProjectAccess } from "@/lib/projects/authorization";
+import { canEditProject } from "@/lib/projects/permissions";
 
 const uuid = z.uuid();
 const nameSchema = z.string().trim().min(1).max(200);
@@ -17,8 +19,8 @@ async function context(projectId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const { data: project } = await supabase.from("projects").select("id").eq("id", id).eq("user_id", user.id).maybeSingle();
-  if (!project) throw new Error("ไม่พบโปรเจกต์นี้");
+  const access = await authorizeProjectAccess(supabase, user.id, id);
+  if (!canEditProject(access.role)) throw new Error("คุณมีสิทธิ์อ่านอย่างเดียวในโปรเจกต์นี้");
   return { supabase, user, projectId: id };
 }
 
@@ -53,7 +55,7 @@ export async function createFlowchartInline(projectInput: string, nameInput: str
 export async function renameFlowchart(projectId: string, flowchartId: string, name: string) {
   const parsedId = uuid.parse(flowchartId), parsedName = nameSchema.parse(name);
   const { supabase, user } = await context(projectId);
-  const { data, error } = await supabase.from("flowcharts").update({ name: parsedName, updated_at: new Date().toISOString() }).eq("id", parsedId).eq("project_id", projectId).eq("user_id", user.id).select().single();
+  const { data, error } = await supabase.from("flowcharts").update({ name: parsedName, updated_at: new Date().toISOString() }).eq("id", parsedId).eq("project_id", projectId).select().single();
   if (error) throw new Error(error.message);
   await logActivity(supabase, user.id, projectId, "renamed", data.id, data.name);
   revalidatePath(`/projects/${projectId}/flowcharts`);
@@ -62,7 +64,7 @@ export async function renameFlowchart(projectId: string, flowchartId: string, na
 export async function duplicateFlowchart(projectId: string, flowchartId: string) {
   const parsedId = uuid.parse(flowchartId);
   const { supabase, user } = await context(projectId);
-  const { data: source, error: readError } = await supabase.from("flowcharts").select("*").eq("id", parsedId).eq("project_id", projectId).eq("user_id", user.id).single();
+  const { data: source, error: readError } = await supabase.from("flowcharts").select("*").eq("id", parsedId).eq("project_id", projectId).single();
   if (readError) throw new Error(readError.message);
   const copy = { id: crypto.randomUUID(), user_id: user.id, project_id: projectId, name: `${source.name} (สำเนา)`, description: source.description, nodes: source.nodes, edges: source.edges, viewport: source.viewport };
   const { data, error } = await supabase.from("flowcharts").insert(copy).select().single();
@@ -74,9 +76,9 @@ export async function duplicateFlowchart(projectId: string, flowchartId: string)
 export async function deleteFlowchart(projectId: string, flowchartId: string) {
   const parsedId = uuid.parse(flowchartId);
   const { supabase, user } = await context(projectId);
-  const { data, error: readError } = await supabase.from("flowcharts").select("name").eq("id", parsedId).eq("project_id", projectId).eq("user_id", user.id).single();
+  const { data, error: readError } = await supabase.from("flowcharts").select("name").eq("id", parsedId).eq("project_id", projectId).single();
   if (readError) throw new Error(readError.message);
-  const { error } = await supabase.from("flowcharts").delete().eq("id", parsedId).eq("project_id", projectId).eq("user_id", user.id);
+  const { error } = await supabase.from("flowcharts").delete().eq("id", parsedId).eq("project_id", projectId);
   if (error) throw new Error(error.message);
   await logActivity(supabase, user.id, projectId, "deleted", parsedId, data.name);
   revalidatePath(`/projects/${projectId}/flowcharts`);

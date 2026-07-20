@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, PageHeader, ToastProvider } from "@/components/ui";
 import { Icon } from "@/components/ui/icons";
 import { navigation } from "@/lib/workspace";
+import { roleLabel } from "@/lib/projects/permissions";
 
 function isCurrentRoute(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
@@ -26,9 +27,11 @@ function isCurrentRoute(pathname: string, href: string) {
 export function WorkspaceShell({
   children,
   projectName,
+  projectRole,
 }: {
   children: React.ReactNode;
   projectName?: string;
+  projectRole: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -180,7 +183,7 @@ export function WorkspaceShell({
           <Link className="project-switcher" href="/projects">
             <small>โปรเจกต์ปัจจุบัน</small>
             <b>{projectName || "ยังไม่มีโปรเจกต์"}</b>
-            <span>เปลี่ยนโปรเจกต์</span>
+            <span>{roleLabel(projectRole)} · เปลี่ยนโปรเจกต์</span>
           </Link>
 
           <nav aria-label="เมนูหลัก">

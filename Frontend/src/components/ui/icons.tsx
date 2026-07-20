@@ -8,7 +8,8 @@ export type IconName =
   | "settings"
   | "activity"
   | "search"
-  | "projects";
+  | "projects"
+  | "team";
 
 const paths: Record<IconName, React.ReactNode> = {
   overview: (
@@ -72,6 +73,13 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <rect x="3.5" y="5" width="17" height="14" rx="2" />
       <path d="M8 5V3h8v2M8 10h8" />
+    </>
+  ),
+  team: (
+    <>
+      <circle cx="9" cy="8" r="3" />
+      <circle cx="17" cy="10" r="2.5" />
+      <path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M14.5 15.5a4.5 4.5 0 0 1 6 4.5" />
     </>
   ),
 };

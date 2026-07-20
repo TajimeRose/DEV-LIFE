@@ -13,6 +13,7 @@ export const navigation: NavItem[] = [
   { href: "/board", label: "บอร์ด", icon: "board", group: "Workspace" },
   { href: "/flowchart", label: "แผนผัง", icon: "flowchart", group: "Workspace" },
   { href: "/settings/integrations", label: "Repository", icon: "repository", group: "Workspace" },
+  { href: "/settings/team", label: "ทีม", icon: "team", group: "Workspace" },
   { href: "/settings", label: "การตั้งค่า", icon: "settings", group: "Tools" },
   { href: "/activity", label: "กิจกรรม", icon: "activity", group: "Tools" },
 ];
