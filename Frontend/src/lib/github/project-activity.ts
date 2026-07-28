@@ -25,6 +25,6 @@ export async function insertRepositoryActivity(
   void idempotencyKey;
   const id = await repositoryActivityId(input);
   const { error } = await supabase.from("project_activity_logs").insert({ id, ...activity });
-  if (error && !isDuplicateDatabaseError(error)) throw new Error(error.message);
+  if (error && !isDuplicateDatabaseError(error)) throw new Error("ไม่สามารถบันทึกกิจกรรม Repository ได้");
   return { id, inserted: !error };
 }

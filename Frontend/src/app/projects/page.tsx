@@ -11,13 +11,13 @@ export default async function ProjectsPage() {
     supabase.from("projects").select("id,name,created_at").eq("user_id", claims.sub).order("created_at", { ascending: false }),
     supabase.from("project_members").select("project_id").eq("user_id", claims.sub),
   ]);
-  if (ownedResult.error) throw new Error(ownedResult.error.message);
-  if (membershipResult.error) throw new Error(membershipResult.error.message);
+  if (ownedResult.error) throw new Error("โหลดโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  if (membershipResult.error) throw new Error("โหลดสมาชิกโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
   const memberProjectIds = [...new Set((membershipResult.data ?? []).map(item => item.project_id))];
   const memberResult = memberProjectIds.length
     ? await supabase.from("projects").select("id,name,created_at").in("id", memberProjectIds).order("created_at", { ascending: false })
     : { data: [], error: null };
-  if (memberResult.error) throw new Error(memberResult.error.message);
+  if (memberResult.error) throw new Error("โหลดโปรเจกต์ที่เข้าร่วมไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
   const projects = [...(ownedResult.data ?? []), ...(memberResult.data ?? [])]
     .filter((project, index, items) => items.findIndex(item => item.id === project.id) === index)
     .sort((left, right) => new Date(right.created_at ?? 0).getTime() - new Date(left.created_at ?? 0).getTime());

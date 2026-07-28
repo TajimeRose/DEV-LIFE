@@ -5,6 +5,7 @@ import { inviteProjectMember, removeProjectMember, revokeProjectInvitation, upda
 import { Badge, Button, Card, FormField, Input, Select, useToast } from "@/components/ui";
 import type { Tables } from "@/lib/database.types";
 import { roleLabel } from "@/lib/projects/permissions";
+import { toSafeError } from "@/lib/errors";
 import { useProjectRealtime } from "@/lib/realtime/use-project-realtime";
 
 type Member = Tables<"project_members">;
@@ -34,7 +35,7 @@ export function TeamManagement({ projectId, projectName, ownerId, role, members:
       await refreshMembers();
       toast(message);
     } catch (error) {
-      toast(error instanceof Error ? error.message : "ทำรายการไม่สำเร็จ", "danger");
+      toast(toSafeError(error).message, "danger");
     }
   });
 

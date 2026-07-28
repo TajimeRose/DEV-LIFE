@@ -6,6 +6,7 @@ import { createFlowchartInline, deleteFlowchart, duplicateFlowchart, renameFlowc
 import { Button, Card, EmptyState, FormField, Input, Modal, Textarea, useToast } from "@/components/ui";
 import type { FlowchartRecord } from "@/lib/flowchart/flowchart-types";
 import { useProjectRealtime } from "@/lib/realtime/use-project-realtime";
+import { toSafeError } from "@/lib/errors";
 import { FlowchartEditor } from "./FlowchartEditor";
 
 export function FlowchartList({ projectId, flowcharts, initialCreate = false }: { projectId: string; flowcharts: FlowchartRecord[]; initialCreate?: boolean }) {
@@ -15,7 +16,7 @@ export function FlowchartList({ projectId, flowcharts, initialCreate = false }: 
   const router = useRouter();
   const toast = useToast();
   useProjectRealtime("flowcharts", projectId, () => router.refresh());
-  const mutate = (action: () => Promise<void>, message: string) => startTransition(async () => { try { await action(); toast(message); setRenameTarget(undefined); router.refresh(); } catch (error) { toast(error instanceof Error ? error.message : "ทำรายการไม่สำเร็จ", "danger"); } });
+  const mutate = (action: () => Promise<void>, message: string) => startTransition(async () => { try { await action(); toast(message); setRenameTarget(undefined); router.refresh(); } catch (error) { toast(toSafeError(error).message, "danger"); } });
   const create = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget, formData = new FormData(form);
@@ -26,7 +27,7 @@ export function FlowchartList({ projectId, flowcharts, initialCreate = false }: 
         setCreateOpen(false);
         form.reset();
         setSelected(created);
-      } catch (error) { setCreateError(error instanceof Error ? error.message : "สร้าง Flowchart ไม่สำเร็จ"); }
+      } catch (error) { setCreateError(toSafeError(error).message); }
     });
   };
   if (selected) return <FlowchartEditor key={selected.id} flowchart={selected} embedded onClose={() => { setSelected(undefined); router.refresh(); }} />;

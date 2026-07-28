@@ -61,16 +61,45 @@ function Editor({ flowchart, embedded = false, onClose }: { flowchart: Flowchart
   const [name, setName] = useState(flowchart.name);
   const [description, setDescription] = useState(flowchart.description ?? "");
   const [status, setStatus] = useState<SaveStatus>("saved");
+  const [saveRequested, setSaveRequested] = useState(0);
   const [editingId, setEditingId] = useState<string>();
   const [editValue, setEditValue] = useState("");
   const toast = useToast();
   const ready = useRef(false), savedName = useRef(flowchart.name), history = useRef<Snapshot[]>([]), future = useRef<Snapshot[]>([]);
+  const saving = useRef(false), queuedSave = useRef(false);
   const statusRef = useRef(status);
   const selectedNode = nodes.find(node => node.selected);
   const selectedEdge = edges.find(edge => edge.selected);
 
   const snapshot = useCallback(() => { history.current.push({ nodes: structuredClone(nodes), edges: structuredClone(edges) }); if (history.current.length > 50) history.current.shift(); future.current = []; }, [nodes, edges]);
-  const save = useCallback(async () => { if (!name.trim()) { setStatus("error"); return false; } setStatus("saving"); try { await saveFlowchart({ id: flowchart.id, project_id: flowchart.project_id!, name, description, nodes, edges, viewport }); if (savedName.current !== name.trim()) { await renameFlowchart(flowchart.project_id!, flowchart.id, name); savedName.current = name.trim(); } setStatus("saved"); return true; } catch { setStatus("error"); return false; } }, [description, edges, flowchart.id, flowchart.project_id, name, nodes, viewport]);
+  const save = useCallback(async () => {
+    if (saving.current) {
+      queuedSave.current = true;
+      return false;
+    }
+    if (!name.trim()) { setStatus("error"); return false; }
+    saving.current = true;
+    setStatus("saving");
+    try {
+      await saveFlowchart({ id: flowchart.id, project_id: flowchart.project_id!, name, description, nodes, edges, viewport });
+      if (savedName.current !== name.trim()) {
+        await renameFlowchart(flowchart.project_id!, flowchart.id, name);
+        savedName.current = name.trim();
+      }
+      setStatus("saved");
+      return true;
+    } catch {
+      setStatus("error");
+      return false;
+    } finally {
+      saving.current = false;
+      if (queuedSave.current) {
+        queuedSave.current = false;
+        setStatus("unsaved");
+        setSaveRequested(request => request + 1);
+      }
+    }
+  }, [description, edges, flowchart.id, flowchart.project_id, name, nodes, viewport]);
 
   useEffect(() => { statusRef.current = status; }, [status]);
   useProjectRealtime("flowcharts", flowchart.project_id!, () => void (async () => {
@@ -86,7 +115,7 @@ function Editor({ flowchart, embedded = false, onClose }: { flowchart: Flowchart
     savedName.current = remote.name;
   })());
 
-  useEffect(() => { if (!ready.current) { ready.current = true; return; } setStatus("unsaved"); const timer = window.setTimeout(save, 1000); return () => window.clearTimeout(timer); }, [nodes, edges, viewport, name, description, save]);
+  useEffect(() => { if (!ready.current) { ready.current = true; return; } setStatus("unsaved"); const timer = window.setTimeout(save, 1000); return () => window.clearTimeout(timer); }, [nodes, edges, viewport, name, description, save, saveRequested]);
 
   const addNode = useCallback((type: FlowNodeType) => { snapshot(); setNodes(current => [...current, { id: `${type}-${clientId()}`, type, position: { x: 320 + Math.random() * 120, y: 180 + current.length * 28 }, data: { label: "", description: "" } }]); }, [setNodes, snapshot]);
   const onConnect = useCallback((connection: Connection) => { snapshot(); setEdges(current => addEdge({ ...connection, id: `edge-${clientId()}`, type: "smoothstep", markerEnd: { type: MarkerType.ArrowClosed } }, current)); }, [setEdges, snapshot]);

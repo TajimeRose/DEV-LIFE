@@ -6,6 +6,7 @@ import { Badge, Button, Card, EmptyState, Input, Modal, Select } from "@/compone
 import { RepositoryList, type ConnectedRepository } from "@/components/github/RepositoryList";
 import type { GitHubErrorCode } from "@/lib/github/repositories-handler";
 import type { GitHubRepository } from "@/lib/github/repository";
+import { canEditProject } from "@/lib/projects/permissions";
 
 type ApiError = { error: { code: GitHubErrorCode; message: string } };
 type ApiSuccess = {
@@ -35,11 +36,13 @@ function GitHubSearchRepositoryCard({
   connected,
   connecting,
   onConnect,
+  editable,
 }: {
   repository: GitHubRepository;
   connected: boolean;
   connecting: boolean;
   onConnect: () => void;
+  editable: boolean;
 }) {
   return <Card as="article" className={`github-repository-card ${connected ? "selected" : ""}`}>
     <div className="github-repository-head">
@@ -58,20 +61,23 @@ function GitHubSearchRepositoryCard({
       <span>Stars {repository.stargazersCount}</span>
       <span>Forks {repository.forksCount}</span>
       <span>สาขาหลัก: {repository.defaultBranch}</span>
-      <Button size="sm" variant={connected ? "primary" : "secondary"} loading={connecting} disabled={connected} onClick={onConnect}>{connected ? "เชื่อมต่อแล้ว" : "เชื่อมกับโปรเจกต์"}</Button>
+       <Button size="sm" variant={connected ? "primary" : "secondary"} loading={connecting} disabled={connected || !editable} onClick={onConnect}>{connected ? "เชื่อมต่อแล้ว" : editable ? "เชื่อมกับโปรเจกต์" : "อ่านอย่างเดียว"}</Button>
     </footer>
   </Card>;
 }
 
 export function GitHubRepositoryBrowser({
   projectId,
+  projectRole,
   privateReposEnabled,
   callbackStatus,
 }: {
   projectId: string;
+  projectRole: string;
   privateReposEnabled: boolean;
   callbackStatus?: string;
 }) {
+  const editable = canEditProject(projectRole);
   const [repositories, setRepositories] = useState<GitHubRepository[]>([]);
   const [visibility, setVisibility] = useState<Visibility>(privateReposEnabled ? "all" : "public");
   const [affiliation, setAffiliation] = useState<Affiliation>("all");
@@ -167,6 +173,7 @@ export function GitHubRepositoryBrowser({
     setConnectedIds(new Set(items.map(item => item.github_repository_id)));
   }, []);
   const connectRepository = async (repository: GitHubRepository) => {
+    if (!editable || connectingId !== undefined) return;
     setConnectingId(repository.id);
     setConnectionStatus(undefined);
     try {
@@ -206,7 +213,7 @@ export function GitHubRepositoryBrowser({
       <div className="github-connection-actions">
         <Badge tone={connected ? "success" : "neutral"}>{connected ? "เชื่อมต่อแล้ว" : "ยังไม่ได้เชื่อมต่อ"}</Badge>
         {(needsConnection || needsReconnect) && <form action={connectGitHub}><Button variant="primary" type="submit">{needsReconnect ? "เชื่อมต่อ GitHub อีกครั้ง" : "เชื่อมต่อ GitHub"}</Button></form>}
-        {connected && <Button variant="danger" onClick={() => setConfirmDisconnect(true)}>ยกเลิกการเชื่อมต่อ</Button>}
+        {connected && editable && <Button variant="danger" onClick={() => setConfirmDisconnect(true)}>ยกเลิกการเชื่อมต่อ</Button>}
       </div>
     </header>
 
@@ -237,12 +244,12 @@ export function GitHubRepositoryBrowser({
       {loading && <RepositorySkeleton />}
       {!loading && error && <Card className="github-error"><h2>โหลด GitHub ไม่สำเร็จ</h2><p>{error.message}</p>{needsReconnect && <form action={connectGitHub}><Button variant="primary">Reconnect GitHub</Button></form>}{needsConnection && <form action={connectGitHub}><Button variant="primary">Connect GitHub</Button></form>}</Card>}
       {!loading && !error && visibleRepositories.length === 0 && <Card><EmptyState title="ไม่พบ repository" description={search ? "ลองเปลี่ยนคำค้นหาหรือตัวกรอง" : "บัญชีนี้ยังไม่มี repository ที่ตรงกับตัวกรอง"} /></Card>}
-      {!loading && !error && visibleRepositories.length > 0 && <div className="github-repository-grid">{visibleRepositories.map(repository => <GitHubSearchRepositoryCard key={repository.id} repository={repository} connected={connectedIds.has(repository.id)} connecting={connectingId === repository.id} onConnect={() => void connectRepository(repository)} />)}</div>}
+       {!loading && !error && visibleRepositories.length > 0 && <div className="github-repository-grid">{visibleRepositories.map(repository => <GitHubSearchRepositoryCard key={repository.id} repository={repository} connected={connectedIds.has(repository.id)} connecting={connectingId === repository.id} editable={editable} onConnect={() => void connectRepository(repository)} />)}</div>}
     </div>
 
     {!loading && !error && hasNext && <div className="github-load-more"><Button onClick={() => void loadMore()} loading={loadingMore}>Load more</Button></div>}
 
-    <Modal
+     <Modal
       open={confirmDisconnect}
       onClose={() => setConfirmDisconnect(false)}
       title="ยกเลิกการเชื่อมต่อ GitHub?"

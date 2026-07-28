@@ -21,6 +21,7 @@ import {
 import type { TimelineEvent } from "@/lib/github/timeline";
 import { dedupeTimelineEvents, sortTimelineEvents } from "@/lib/github/timeline";
 import { isVisibleRepositoryActivity } from "@/lib/github/timeline-view";
+import { canEditProject } from "@/lib/projects/permissions";
 import {
   CommitDetail,
   CommitTimelineCard,
@@ -471,7 +472,8 @@ function TasksTab({ tasks, total }: { tasks: RepositoryTask[]; total: number }) 
   </section>;
 }
 
-export function RepositoryWorkspace({ projectId, repositoryId, projectName }: { projectId: string; repositoryId: string; projectName?: string }) {
+export function RepositoryWorkspace({ projectId, repositoryId, projectName, projectRole }: { projectId: string; repositoryId: string; projectName?: string; projectRole: string }) {
+  const editable = canEditProject(projectRole);
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = repositoryTab(searchParams.get("tab"));
@@ -598,7 +600,7 @@ export function RepositoryWorkspace({ projectId, repositoryId, projectName }: { 
   return <div className="repository-workspace">
     <header className="repo-ws-header">
       <div className="repo-ws-identity"><small>{projectName ? `${projectName} / connected repository` : "Connected repository"}</small><h1><span>{repository.github_owner}/</span>{repository.github_name}</h1><div><Badge>{repository.visibility ?? (repository.is_private ? "private" : "public")}</Badge><Badge tone="success">repository connected</Badge>{repository.is_archived && <Badge>archived</Badge>}</div></div>
-      <div className="repo-ws-actions"><Button variant="primary" loading={syncing} disabled={syncing} onClick={() => void synchronize()}>Sync Repository</Button>{repositoryUrl && <a className="ui-button" href={repositoryUrl} target="_blank" rel="noreferrer noopener">Open on GitHub</a>}</div>
+       <div className="repo-ws-actions"><Button variant="primary" loading={syncing} disabled={syncing || !editable} onClick={() => void synchronize()}>{editable ? "Sync Repository" : "Read-only"}</Button>{repositoryUrl && <a className="ui-button" href={repositoryUrl} target="_blank" rel="noreferrer noopener">Open on GitHub</a>}</div>
       <dl className="repo-ws-status"><div><dt>Code branch</dt><dd>{currentBranch ?? "Unavailable"}</dd></div><div><dt>Sync status</dt><dd>{repository.sync_status}</dd></div><div><dt>Last successful sync</dt><dd>{formatDate(repository.last_synced_at)}</dd></div><div><dt>Connection</dt><dd>Repository record connected; token validity not asserted</dd></div></dl>
       {safeSyncError(repository.sync_error) && <p className="repo-ws-sync-error" role="alert">{safeSyncError(repository.sync_error)}</p>}
       {baseError && <p className="repo-ws-sync-error" role="alert">Repository metadata refresh failed: {baseError.message} Existing repository data may be stale.</p>}

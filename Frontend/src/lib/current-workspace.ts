@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { authorizeProjectAccess, ProjectAccessError } from "@/lib/projects/authorization";
 import { normalizeProjectRole } from "@/lib/projects/permissions";
+import { safeError } from "@/lib/errors";
 
 export const ACTIVE_PROJECT_COOKIE = "devlife-active-project";
 
@@ -20,7 +21,7 @@ export const getCurrentWorkspace = cache(async () => {
     throw error;
   }
   const { data: project, error } = await supabase.from("projects").select("*").eq("id", projectId).maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw safeError("DATABASE_UNAVAILABLE", "โหลดโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
   return { supabase, user, project, role };
 });
 
@@ -46,7 +47,7 @@ export async function getProjectWorkspace(selection: WorkspaceSelection = {}) {
     selection.repositoryActivities ? repositoryActivityQuery : Promise.resolve({ data: [], error: null }),
   ]);
   const error = taskResult.error || noteResult.error || activityResult.error || repositoryActivityResult.error;
-  if (error) throw new Error(error.message);
+  if (error) throw safeError("DATABASE_UNAVAILABLE", "โหลดข้อมูลโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
   return {
     project,
     role,

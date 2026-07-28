@@ -64,11 +64,10 @@ export function ConnectedTasks({ project, initial, role = "owner" }: { project: 
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const editable = canEditProject(role);
-  void editable;
   useProjectRealtime("tasks", project.id, () => void getTasks(project.id).then(setTasks));
   const add = (event: FormEvent) => {
     event.preventDefault();
-    if (!title.trim()) return;
+    if (!editable || !title.trim() || pending) return;
     setError("");
     startTransition(async () => {
       try {
@@ -81,6 +80,7 @@ export function ConnectedTasks({ project, initial, role = "owner" }: { project: 
     });
   };
   const toggle = (task: Task) => {
+    if (!editable || pending) return;
     const status = task.status === "done" ? "todo" : "done";
     setTasks(current => current.map(item => item.id === task.id ? { ...item, status } : item));
     startTransition(async () => {
@@ -94,7 +94,7 @@ export function ConnectedTasks({ project, initial, role = "owner" }: { project: 
     });
   };
   const changePriority = (task: Task, nextPriority: string) => {
-    if (priorityLabel(task.priority) === nextPriority) return;
+    if (!editable || pending || priorityLabel(task.priority) === nextPriority) return;
     setError("");
     setTasks(current => current.map(item => item.id === task.id ? { ...item, priority: nextPriority } : item));
     startTransition(async () => {
@@ -107,7 +107,7 @@ export function ConnectedTasks({ project, initial, role = "owner" }: { project: 
       }
     });
   };
-  return <><div className="heading"><div><small>งาน</small><h1>{project.name}</h1><p>จัดลำดับความสำคัญและติดตามงานทั้งหมด</p></div><Link className="view-board" href="/board">ดูแบบบอร์ด</Link></div><section className="panel feature-panel"><div className="checklist">{tasks.map(task => <div className="task" key={task.id}><input aria-label={`ทำเครื่องหมาย ${task.title}`} type="checkbox" checked={task.status === "done"} onChange={() => toggle(task)} /><span className={task.status === "done" ? "strike" : ""}>{task.title}</span><Select className={`task-priority-select ${priorityClass(task.priority)}`} aria-label={`ความสำคัญของ ${task.title}`} value={priorityLabel(task.priority)} onChange={event => changePriority(task, event.target.value)}><option>ทั่วไป</option><option>สำคัญ</option><option>สำคัญมาก</option></Select></div>)}{!tasks.length && <p className="empty-copy">ยังไม่มีงาน</p>}{error && <p className="form-error" role="alert">{error}</p>}<form className="task-form" onSubmit={add}><Input aria-label="ชื่องาน" value={title} onChange={event => setTitle(event.target.value)} placeholder="เพิ่มงาน…" required /><Select aria-label="ความสำคัญ" value={priority} onChange={event => setPriority(event.target.value)}><option>ทั่วไป</option><option>สำคัญ</option><option>สำคัญมาก</option></Select><Button variant="primary" loading={pending}>เพิ่มงาน</Button></form></div></section></>;
+  return <><div className="heading"><div><small>งาน</small><h1>{project.name}</h1><p>จัดลำดับความสำคัญและติดตามงานทั้งหมด</p></div><Link className="view-board" href="/board">ดูแบบบอร์ด</Link></div><section className="panel feature-panel"><div className="checklist">{!editable && <p className="form-hint" role="status">คุณมีสิทธิ์อ่านอย่างเดียวในโปรเจกต์นี้</p>}{tasks.map(task => <div className="task" key={task.id}><input disabled={!editable || pending} aria-label={`ทำเครื่องหมาย ${task.title}`} type="checkbox" checked={task.status === "done"} onChange={() => toggle(task)} /><span className={task.status === "done" ? "strike" : ""}>{task.title}</span><Select disabled={!editable || pending} className={`task-priority-select ${priorityClass(task.priority)}`} aria-label={`ความสำคัญของ ${task.title}`} value={priorityLabel(task.priority)} onChange={event => changePriority(task, event.target.value)}><option>ทั่วไป</option><option>สำคัญ</option><option>สำคัญมาก</option></Select></div>)}{!tasks.length && <p className="empty-copy">ยังไม่มีงาน</p>}{error && <p className="form-error" role="alert">{error}</p>}{editable && <form className="task-form" onSubmit={add}><Input aria-label="ชื่องาน" value={title} onChange={event => setTitle(event.target.value)} placeholder="เพิ่มงาน…" required /><Select aria-label="ความสำคัญ" value={priority} onChange={event => setPriority(event.target.value)}><option>ทั่วไป</option><option>สำคัญ</option><option>สำคัญมาก</option></Select><Button variant="primary" loading={pending}>เพิ่มงาน</Button></form>}</div></section></>;
 }
 
 function noteText(content: Note["content"]) { return typeof content === "string" ? content : JSON.stringify(content, null, 2); }
@@ -124,7 +124,6 @@ export function ConnectedNotes({ project, initial, role = "owner" }: { project: 
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const toast = useToast();
   const editable = canEditProject(role);
-  void editable;
   const snapshot = selected ? `${selected.title}\n${noteText(selected.content)}` : "";
   const dirty = Boolean(selected && savedSnapshots[selected.id] !== snapshot);
   useProjectRealtime("notes", project.id, () => void getNotes(project.id).then(next => {
@@ -138,6 +137,7 @@ export function ConnectedNotes({ project, initial, role = "owner" }: { project: 
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [dirty]);
   const create = () => {
+    if (!editable || pending) return;
     if (dirty) { setNextId("__new__"); setConfirmSwitch(true); return; }
     setError("");
     startTransition(async () => {
@@ -162,9 +162,9 @@ export function ConnectedNotes({ project, initial, role = "owner" }: { project: 
     setNextId("");
     if (target === "__new__") window.setTimeout(create, 0); else setSelectedId(target);
   };
-  const patch = (input: { title?: string; content?: string }) => { if (selected) setNotes(current => current.map(note => note.id === selected.id ? { ...note, ...input } : note)); };
+  const patch = (input: { title?: string; content?: string }) => { if (editable && selected && !pending) setNotes(current => current.map(note => note.id === selected.id ? { ...note, ...input } : note)); };
   const save = useCallback((notify = true) => {
-    if (!selected || !(selected.title ?? "").trim() || pending) return;
+    if (!editable || !selected || !(selected.title ?? "").trim() || pending) return;
     const savingSnapshot = `${selected.title ?? ""}\n${noteText(selected.content)}`;
     setError("");
     startTransition(async () => {
@@ -179,7 +179,7 @@ export function ConnectedNotes({ project, initial, role = "owner" }: { project: 
         if (notify) toast("บันทึกโน้ตแล้ว");
       } catch (cause) { setError(cause instanceof Error ? cause.message : "บันทึกโน้ตไม่สำเร็จ"); }
     });
-  }, [pending, selected, setError, setNotes, setSavedSnapshots, startTransition, toast]);
+  }, [editable, pending, selected, setError, setNotes, setSavedSnapshots, startTransition, toast]);
   useEffect(() => {
     if (!dirty || pending || !(selected?.title ?? "").trim()) return;
     const timer = window.setTimeout(() => save(false), 1000);
@@ -222,11 +222,11 @@ export function ConnectedBoard({ project, initial, role = "owner" }: { project: 
   const [dragging, setDragging] = useState("");
   const [over, setOver] = useState("");
   const [error, setError] = useState("");
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const editable = canEditProject(role);
-  void editable;
   useProjectRealtime("tasks", project.id, () => void getTasks(project.id).then(setTasks));
   const move = (taskId: string, status: string) => {
+    if (!editable || pending) return;
     const task = tasks.find(item => item.id === taskId);
     if (!task || task.status === status) return;
     setError("");
@@ -242,5 +242,5 @@ export function ConnectedBoard({ project, initial, role = "owner" }: { project: 
     });
   };
   const cardColor = (id: string) => [...id].reduce((total, character) => total + character.charCodeAt(0), 0) % 5;
-  return <><div className="heading"><div><small>บอร์ด</small><h1>{project.name}</h1><p>ลากการ์ดหรือเลือกสถานะ งานจะถูกบันทึกอัตโนมัติ</p></div><Link className="view-board" href="/checklists">ดูแบบรายการ</Link></div>{error && <p className="form-error board-error" role="alert">{error}</p>}<div className="kanban">{statuses.map(status => <section className={over === status ? "drop-active" : ""} key={status} onDragOver={event => { event.preventDefault(); setOver(status); }} onDragLeave={() => setOver("")} onDrop={event => { event.preventDefault(); move(event.dataTransfer.getData("text/plain"), status); setDragging(""); setOver(""); }}><div className="column-title"><h2>{labels[status]}</h2><span>{tasks.filter(task => task.status === status).length}</span></div>{tasks.filter(task => task.status === status).map(task => <article className={`board-card board-card-color-${cardColor(task.id)} ${dragging === task.id ? "dragging" : ""}`} draggable key={task.id} onDragStart={event => { event.dataTransfer.setData("text/plain", task.id); setDragging(task.id); }} onDragEnd={() => { setDragging(""); setOver(""); }}><div className="board-card-head"><small className={`priority ${priorityClass(task.priority)}`}>{priorityLabel(task.priority)}</small><span className="board-card-grip">ลากเพื่อย้าย</span></div><b>{task.title}</b>{task.description && <span className="board-card-description">{task.description}</span>}<Select aria-label={`ย้าย ${task.title}`} value={task.status} onChange={event => move(task.id, event.target.value)}><option value="todo">รอทำ</option><option value="in_progress">กำลังทำ</option><option value="review">ตรวจสอบ</option><option value="done">เสร็จแล้ว</option></Select></article>)}</section>)}</div></>;
+  return <><div className="heading"><div><small>บอร์ด</small><h1>{project.name}</h1><p>ลากการ์ดหรือเลือกสถานะ งานจะถูกบันทึกอัตโนมัติ</p></div><Link className="view-board" href="/checklists">ดูแบบรายการ</Link></div>{!editable && <p className="form-hint" role="status">คุณมีสิทธิ์อ่านอย่างเดียวในโปรเจกต์นี้</p>}{error && <p className="form-error board-error" role="alert">{error}</p>}<div className="kanban">{statuses.map(status => <section className={over === status ? "drop-active" : ""} key={status} onDragOver={event => { event.preventDefault(); if (editable) setOver(status); }} onDragLeave={() => setOver("")} onDrop={event => { event.preventDefault(); move(event.dataTransfer.getData("text/plain"), status); setDragging(""); setOver(""); }}><div className="column-title"><h2>{labels[status]}</h2><span>{tasks.filter(task => task.status === status).length}</span></div>{tasks.filter(task => task.status === status).map(task => <article className={`board-card board-card-color-${cardColor(task.id)} ${dragging === task.id ? "dragging" : ""}`} draggable={editable && !pending} key={task.id} onDragStart={event => { if (!editable) return; event.dataTransfer.setData("text/plain", task.id); setDragging(task.id); }} onDragEnd={() => { setDragging(""); setOver(""); }}><div className="board-card-head"><small className={`priority ${priorityClass(task.priority)}`}>{priorityLabel(task.priority)}</small><span className="board-card-grip">ลากเพื่อย้าย</span></div><b>{task.title}</b>{task.description && <span className="board-card-description">{task.description}</span>}<Select disabled={!editable || pending} aria-label={`ย้าย ${task.title}`} value={task.status} onChange={event => move(task.id, event.target.value)}><option value="todo">รอทำ</option><option value="in_progress">กำลังทำ</option><option value="review">ตรวจสอบ</option><option value="done">เสร็จแล้ว</option></Select></article>)}</section>)}</div></>;
 }

@@ -16,6 +16,7 @@ type ConnectedRepository = Tables<"project_repositories">;
 export type RepositoryConnectionDependencies = {
   authenticate: () => Promise<{ userId: string } | null>;
   authorize: (projectId: string, userId: string) => Promise<void>;
+  authorizeWrite?: (projectId: string, userId: string) => Promise<void>;
   list: (projectId: string) => Promise<ConnectedRepository[]>;
   findDuplicate: (projectId: string, githubRepositoryId: number) => Promise<ConnectedRepository | null>;
   readGitHubRepository: (userId: string, githubRepositoryId: number) => Promise<GitHubRepository | null>;
@@ -85,6 +86,15 @@ export async function handleProjectRepositoriesPost(
   try {
     const access = await authenticateAndAuthorize(projectId, dependencies);
     if (!access.ok) return access.response;
+
+    if (dependencies.authorizeWrite) {
+      try {
+        await dependencies.authorizeWrite(projectId, access.auth.userId);
+      } catch (error) {
+        if (error instanceof ProjectAccessError) return errorResponse(error.status, "UNAUTHORIZED", "You do not have permission to change this project.");
+        throw error;
+      }
+    }
 
     let body: unknown;
     try {

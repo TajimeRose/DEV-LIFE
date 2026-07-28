@@ -10,6 +10,7 @@ import {
 import { buildRepositorySyncRecords } from "@/lib/github/sync-records";
 import { readGitHubToken } from "@/lib/github/token-vault";
 import { authorizeProjectAccess, ProjectAccessError } from "@/lib/projects/authorization";
+import { canEditProject } from "@/lib/projects/permissions";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -25,11 +26,9 @@ const reportSyncError: RepositorySyncErrorReporter = (operation, cause) => {
     ? {
         name: "name" in cause && typeof cause.name === "string" ? cause.name : undefined,
         code: "code" in cause && typeof cause.code === "string" ? cause.code : undefined,
-        message: "message" in cause && typeof cause.message === "string" ? cause.message : "Unknown error",
-        details: "details" in cause && typeof cause.details === "string" ? cause.details : undefined,
-        hint: "hint" in cause && typeof cause.hint === "string" ? cause.hint : undefined,
+        safeCode: "code" in cause && typeof cause.code === "string" ? cause.code : undefined,
       }
-    : { message: String(cause) };
+    : { name: "UnknownError" };
   console.error("Repository synchronization failed", { operation, ...details });
 };
 
@@ -53,7 +52,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
   if (authError || !claims?.claims.sub) return error(401, "UNAUTHENTICATED", "Please sign in to continue.");
 
   try {
-    await authorizeProjectAccess(supabase, claims.claims.sub, projectId);
+    const access = await authorizeProjectAccess(supabase, claims.claims.sub, projectId);
+    if (!canEditProject(access.role)) return error(403, "UNAUTHORIZED", "You do not have permission to synchronize this repository.");
   } catch (cause) {
     if (cause instanceof ProjectAccessError) {
       return error(cause.status, "UNAUTHORIZED", "You do not have access to this project.");

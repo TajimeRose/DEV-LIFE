@@ -87,7 +87,7 @@ export async function updateProfile(_state: ProfileState, formData: FormData): P
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "กรุณาเข้าสู่ระบบอีกครั้ง" };
   const { error } = await supabase.auth.updateUser({ data: { display_name: result.data.displayName } });
-  if (error) return { error: error.message };
+  if (error) return { error: "บันทึกชื่อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
   revalidatePath("/", "layout");
   return { success: "บันทึกชื่อเรียบร้อยแล้ว" };
 }
@@ -95,6 +95,6 @@ export async function updateProfile(_state: ProfileState, formData: FormData): P
 export async function logout() {
   await clearGitHubToken();
   const { error } = await (await createClient()).auth.signOut();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("ออกจากระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
   redirect("/login");
 }

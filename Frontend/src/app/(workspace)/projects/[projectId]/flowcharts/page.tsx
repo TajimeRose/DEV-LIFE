@@ -8,6 +8,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const [{ projectId }, query, { supabase, user, project }] = await Promise.all([params, searchParams, getCurrentWorkspace()]);
   if (!user || !project || project.id !== projectId) notFound();
   const { data, error } = await supabase.from("flowcharts").select("*").eq("project_id", projectId).order("updated_at", { ascending: false });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("โหลด Flowchart ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
   return <><PageHeader eyebrow="แผนผัง" title={project.name} description="ออกแบบกระบวนการด้วยแผนภาพที่แก้ไขและบันทึกอัตโนมัติ" /><FlowchartList projectId={projectId} flowcharts={(data ?? []).map(toFlowchartRecord)} initialCreate={query.create === "1"} /></>;
 }

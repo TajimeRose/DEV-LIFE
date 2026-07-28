@@ -51,7 +51,7 @@ export async function authorizeProjectAccess(
         .select("id,user_id")
         .eq("id", id)
         .maybeSingle();
-      if (error) throw new Error(error.message);
+       if (error) throw new Error("ไม่สามารถตรวจสอบสิทธิ์โปรเจกต์ได้");
       return data;
     },
     findMembership: async (id, memberUserId) => {
@@ -61,7 +61,7 @@ export async function authorizeProjectAccess(
         .eq("project_id", id)
         .eq("user_id", memberUserId)
         .maybeSingle();
-      if (error) throw new Error(error.message);
+       if (error) throw new Error("ไม่สามารถตรวจสอบสมาชิกโปรเจกต์ได้");
       return data;
     },
   });

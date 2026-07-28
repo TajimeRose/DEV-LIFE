@@ -54,8 +54,8 @@ export async function inviteProjectMember(_state: TeamActionState, formData: For
 
     revalidatePath("/settings/team");
     return { success: "สร้างคำเชิญแล้ว ส่งลิงก์นี้ให้สมาชิก", inviteUrl: `/invitations/${invitationToken}` };
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : "สร้างคำเชิญไม่สำเร็จ" };
+  } catch {
+    return { error: "สร้างคำเชิญไม่สำเร็จ กรุณาตรวจสอบสิทธิ์และลองใหม่อีกครั้ง" };
   }
 }
 

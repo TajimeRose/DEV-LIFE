@@ -43,12 +43,16 @@ export async function selectProject(formData: FormData) {
 
 export type ProjectFormState = { error?: string; success?: string } | null;
 
+function safeProjectError(fallback: string) {
+  return { error: fallback } satisfies ProjectFormState;
+}
+
 export async function createAndSelectProject(_state: ProjectFormState, formData: FormData): Promise<ProjectFormState> {
   const result = projectName.safeParse(formData.get("name"));
   if (!result.success) return { error: "กรุณากรอกชื่อโปรเจกต์ไม่เกิน 200 ตัวอักษร" };
   const { supabase, user } = await authenticated();
   const { data, error } = await supabase.from("projects").insert({ id: crypto.randomUUID(), name: result.data, status: "active", user_id: user.id }).select().single();
-  if (error) return { error: error.message };
+  if (error) return safeProjectError("สร้างโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
   await activate(data.id);
   redirect("/dashboard");
 }
@@ -59,7 +63,7 @@ export async function renameActiveProject(_state: ProjectFormState, formData: Fo
   if (!idResult.success || !nameResult.success) return { error: "กรุณากรอกชื่อโปรเจกต์ไม่เกิน 200 ตัวอักษร" };
   const { supabase, user } = await authenticated();
   const { error } = await supabase.from("projects").update({ name: nameResult.data }).eq("id", idResult.data).eq("user_id", user.id);
-  if (error) return { error: error.message };
+  if (error) return safeProjectError("เปลี่ยนชื่อโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
   revalidatePath("/", "layout");
   return { success: "เปลี่ยนชื่อโปรเจกต์เรียบร้อยแล้ว" };
 }

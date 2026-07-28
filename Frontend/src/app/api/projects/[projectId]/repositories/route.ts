@@ -8,7 +8,8 @@ import {
 } from "@/lib/github/repository-connections-handler";
 import { stableUuid } from "@/lib/github/stable-id";
 import { readGitHubToken } from "@/lib/github/token-vault";
-import { authorizeProjectAccess } from "@/lib/projects/authorization";
+import { authorizeProjectAccess, ProjectAccessError } from "@/lib/projects/authorization";
+import { canEditProject } from "@/lib/projects/permissions";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -17,15 +18,12 @@ function reportRepositoryConnectionError(
   operation: "list" | "connect" | "record_activity",
   error: unknown,
 ) {
-  const details = typeof error === "object" && error !== null
+  const details = error && typeof error === "object"
     ? {
-        name: "name" in error && typeof error.name === "string" ? error.name : undefined,
+        name: "name" in error && typeof error.name === "string" ? error.name : "UnknownError",
         code: "code" in error && typeof error.code === "string" ? error.code : undefined,
-        message: "message" in error && typeof error.message === "string" ? error.message : "Unknown error",
-        details: "details" in error && typeof error.details === "string" ? error.details : undefined,
-        hint: "hint" in error && typeof error.hint === "string" ? error.hint : undefined,
       }
-    : { message: String(error) };
+    : { name: "UnknownError" };
   console.error("Repository connection failed", { operation, ...details });
 }
 
@@ -48,6 +46,11 @@ function dependencies(): RepositoryConnectionDependencies {
       const { supabase } = await context;
       await authorizeProjectAccess(supabase, userId, projectId);
     },
+    authorizeWrite: async (projectId, userId) => {
+      const { supabase } = await context;
+      const access = await authorizeProjectAccess(supabase, userId, projectId);
+      if (!canEditProject(access.role)) throw new ProjectAccessError(403, "Project editing denied");
+    },
     list: async projectId => {
       const { supabase } = await context;
       const { data, error } = await supabase
@@ -55,7 +58,7 @@ function dependencies(): RepositoryConnectionDependencies {
         .select("*")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false });
-      if (error) throw new Error(error.message);
+      if (error) throw new Error("repository_list_failed");
       return data;
     },
     findDuplicate: async (projectId, githubRepositoryId) => {
@@ -66,7 +69,7 @@ function dependencies(): RepositoryConnectionDependencies {
         .eq("project_id", projectId)
         .eq("github_repository_id", githubRepositoryId)
         .maybeSingle();
-      if (error) throw new Error(error.message);
+      if (error) throw new Error("repository_duplicate_check_failed");
       return data;
     },
     readGitHubRepository: async (userId, githubRepositoryId) => {
