@@ -6,7 +6,6 @@ import {
   aiAnalyzeRequirement,
   aiCreateTasksFromRequirement,
   applyTemplate,
-  BUILTIN_TEMPLATES,
   convertIdeaToNote,
   convertIdeaToTask,
   createIdea,
@@ -26,8 +25,8 @@ import {
   type ContextMapData,
   type IdeaItem,
   type SearchResultItem,
-  type TemplateData,
 } from "@/app/actions/data";
+import { BUILTIN_TEMPLATES, type TemplateData } from "@/lib/templates";
 import { Badge, Button, Card, EmptyState, FormField, Input, Modal, Select, Textarea, useToast } from "@/components/ui";
 import type { Tables } from "@/lib/database.types";
 import { canEditProject } from "@/lib/projects/permissions";
