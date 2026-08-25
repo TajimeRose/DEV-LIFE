@@ -9,7 +9,11 @@ export type IconName =
   | "activity"
   | "search"
   | "projects"
-  | "team";
+  | "team"
+  | "inbox"
+  | "templates"
+  | "contextMap"
+  | "ai";
 
 const paths: Record<IconName, React.ReactNode> = {
   overview: (
@@ -80,6 +84,38 @@ const paths: Record<IconName, React.ReactNode> = {
       <circle cx="9" cy="8" r="3" />
       <circle cx="17" cy="10" r="2.5" />
       <path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M14.5 15.5a4.5 4.5 0 0 1 6 4.5" />
+    </>
+  ),
+  inbox: (
+    <>
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+      <polyline points="22,6 12,13 2,6" />
+    </>
+  ),
+  templates: (
+    <>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+    </>
+  ),
+  contextMap: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <circle cx="5" cy="6" r="2" />
+      <circle cx="19" cy="6" r="2" />
+      <circle cx="5" cy="18" r="2" />
+      <circle cx="19" cy="18" r="2" />
+      <line x1="7" y1="7" x2="10" y2="10" />
+      <line x1="17" y1="7" x2="14" y2="10" />
+      <line x1="7" y1="17" x2="10" y2="14" />
+      <line x1="17" y1="17" x2="14" y2="14" />
+    </>
+  ),
+  ai: (
+    <>
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
     </>
   ),
 };

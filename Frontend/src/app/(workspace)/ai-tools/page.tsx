@@ -1,5 +1,8 @@
-import { redirect } from "next/navigation";
+import { ConnectedAiTools, NoProject } from "@/components/connected-features";
+import { getCurrentWorkspace } from "@/lib/current-workspace";
 
-export default function Page() {
-  redirect("/dashboard");
+export default async function Page() {
+  const { project, role } = await getCurrentWorkspace();
+  if (!project) return <NoProject />;
+  return <ConnectedAiTools project={project} role={role ?? "viewer"} />;
 }

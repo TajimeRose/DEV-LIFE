@@ -1,3 +1,8 @@
-import { Templates } from "@/components/features";
+import { ConnectedTemplates, NoProject } from "@/components/connected-features";
+import { getCurrentWorkspace } from "@/lib/current-workspace";
 
-export default function Page() { return <Templates />; }
+export default async function Page() {
+  const { project, role } = await getCurrentWorkspace();
+  if (!project) return <NoProject />;
+  return <ConnectedTemplates project={project} role={role ?? "viewer"} />;
+}

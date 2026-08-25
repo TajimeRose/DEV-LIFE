@@ -8,10 +8,15 @@ export type Columns = Record<"Backlog" | "In progress" | "Review" | "Done", Card
 
 export const navigation: NavItem[] = [
   { href: "/dashboard", label: "ภาพรวม", icon: "overview", group: "Workspace" },
+  { href: "/inbox", label: "กล่องไอเดีย", icon: "inbox", group: "Workspace" },
+  { href: "/ai-tools", label: "ผู้ช่วย AI", icon: "ai", group: "Workspace" },
+  { href: "/templates", label: "แม่แบบ", icon: "templates", group: "Workspace" },
+  { href: "/context-map", label: "แผนที่บริบท", icon: "contextMap", group: "Workspace" },
   { href: "/notes", label: "โน้ต", icon: "notes", group: "Workspace" },
   { href: "/checklists", label: "งาน", icon: "tasks", group: "Workspace" },
   { href: "/board", label: "บอร์ด", icon: "board", group: "Workspace" },
   { href: "/flowchart", label: "แผนผัง", icon: "flowchart", group: "Workspace" },
+  { href: "/search", label: "ค้นหา", icon: "search", group: "Workspace" },
   { href: "/settings/integrations", label: "Repository", icon: "repository", group: "Workspace" },
   { href: "/settings/team", label: "ทีม", icon: "team", group: "Workspace" },
   { href: "/settings", label: "การตั้งค่า", icon: "settings", group: "Tools" },

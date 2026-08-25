@@ -188,15 +188,25 @@ function Overview({ data, metricsError, branchTotal, branchError, taskTotal, tas
   const recentEvents = events.filter(isVisibleRepositoryActivity);
   const latest = data?.commits[0];
   const totals = [
-    ["Branches", branchTotal, branchError],
-    ["Commits", data?.commitTotal, metricsError],
-    ["Pull Requests", data?.pullRequestTotal, metricsError],
-    ["Reviews", data?.reviewTotal, metricsError],
-    ["Related tasks", taskTotal, taskError],
+    ["Branches", branchTotal, branchError, "Total synchronized Git branches"],
+    ["Commits", data?.commitTotal, metricsError, "Synced commit history"],
+    ["Pull Requests", data?.pullRequestTotal, metricsError, "Synced Pull Requests"],
+    ["Reviews", data?.reviewTotal, metricsError, "Synced PR reviews"],
+    ["Related Tasks", taskTotal, taskError, "Tasks linked to this repository"],
   ] as const;
   return <div className="repo-ws-overview">
     <section className="repo-ws-totals" aria-label="Exact synchronized repository totals">
-      {totals.map(([label, count, error]) => <Card key={label}><span>Synchronized {label}</span><strong>{count ?? "Unavailable"}</strong>{error && <small title={error.message}>{error.code}</small>}</Card>)}
+      {totals.map(([label, count, error, desc]) => (
+        <Card key={label} className="repo-ws-stat-card">
+          <span className="repo-ws-stat-label">{label}</span>
+          <strong className="repo-ws-stat-value">{count ?? "Unavailable"}</strong>
+          {error ? (
+            <small className="repo-ws-stat-error" title={error.message}>{error.code}</small>
+          ) : (
+            <small className="repo-ws-stat-desc">{desc}</small>
+          )}
+        </Card>
+      ))}
     </section>
     {(metricsError || branchError || taskError) && <Card className="repo-ws-stale-warning"><strong>Some synchronized totals are unavailable</strong><p role="alert">Available sections remain current; unavailable sections are labeled above.</p><Button onClick={onRetry}>Retry unavailable data</Button></Card>}
     <div className="repo-ws-overview-grid">

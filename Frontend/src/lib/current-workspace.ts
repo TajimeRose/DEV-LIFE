@@ -13,16 +13,21 @@ export const getCurrentWorkspace = cache(async () => {
   if (authError || !user) return { supabase, user: null, project: null, role: null };
   const projectId = (await cookies()).get(ACTIVE_PROJECT_COOKIE)?.value;
   if (!projectId) return { supabase, user, project: null, role: null };
-  let role;
+
+  // Parallelize auth verification and project info loading for maximum performance
   try {
-    role = normalizeProjectRole((await authorizeProjectAccess(supabase, user.id, projectId)).role);
+    const [accessResult, projectResult] = await Promise.all([
+      authorizeProjectAccess(supabase, user.id, projectId),
+      supabase.from("projects").select("*").eq("id", projectId).maybeSingle()
+    ]);
+
+    if (projectResult.error) throw safeError("DATABASE_UNAVAILABLE", "โหลดโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    const role = normalizeProjectRole(accessResult.role);
+    return { supabase, user, project: projectResult.data, role };
   } catch (error) {
     if (error instanceof ProjectAccessError) return { supabase, user, project: null, role: null };
     throw error;
   }
-  const { data: project, error } = await supabase.from("projects").select("*").eq("id", projectId).maybeSingle();
-  if (error) throw safeError("DATABASE_UNAVAILABLE", "โหลดโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
-  return { supabase, user, project, role };
 });
 
 type WorkspaceSelection = {
