@@ -79,18 +79,128 @@ export async function createProject(input: unknown) {
   await activity(data.id, "created", "project", data.id, { name: data.name });
   return data;
 }
-export async function getProjects() { const { supabase, user } = await context(); const [owned, memberships] = await Promise.all([supabase.from("projects").select("*").eq("user_id", user.id).order("created_at", { ascending: false }), supabase.from("project_members").select("project_id").eq("user_id", user.id)]); if (owned.error) throw databaseError("โหลดโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); if (memberships.error) throw databaseError("โหลดสมาชิกโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); const ids = [...new Set((memberships.data ?? []).map(item => item.project_id))]; const shared = ids.length ? await supabase.from("projects").select("*").in("id", ids) : { data: [], error: null }; if (shared.error) throw databaseError("โหลดโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); return [...(owned.data ?? []), ...(shared.data ?? [])].filter((project, index, items) => items.findIndex(item => item.id === project.id) === index).sort((left, right) => new Date(right.created_at ?? 0).getTime() - new Date(left.created_at ?? 0).getTime()); }
- export async function updateProject(id: string, input: unknown) { const value = projectInput.partial().refine(v => Object.keys(v).length > 0).parse(input), { supabase, user } = await context(); const { data, error } = await supabase.from("projects").update(value).eq("id", uuid.parse(id)).eq("user_id", user.id).select().single(); if (error) throw databaseError("แก้ไขโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); await activity(data.id, "updated", "project", data.id, value); return data; }
-export async function deleteProject(id: string) { const projectId = uuid.parse(id), { supabase, user } = await ownProject(projectId); await activity(projectId, "deleted", "project", projectId, {}); const { error } = await supabase.from("projects").delete().eq("id", projectId).eq("user_id", user.id); if (error) throw databaseError("ลบโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); }
+export async function getProjects() {
+  const { supabase, user } = await context();
+  const [owned, memberships] = await Promise.all([
+    supabase.from("projects").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("project_members").select("project_id").eq("user_id", user.id),
+  ]);
+  if (owned.error) throw databaseError("โหลดโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  if (memberships.error) throw databaseError("โหลดสมาชิกโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  const ids = [...new Set((memberships.data ?? []).map(item => item.project_id))];
+  const shared = ids.length ? await supabase.from("projects").select("*").in("id", ids) : { data: [], error: null };
+  if (shared.error) throw databaseError("โหลดโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  return [...(owned.data ?? []), ...(shared.data ?? [])]
+    .filter((project, index, items) => items.findIndex(item => item.id === project.id) === index)
+    .sort((left, right) => new Date(right.created_at ?? 0).getTime() - new Date(left.created_at ?? 0).getTime());
+}
 
-export async function createTask(input: unknown) { const value = taskInput.parse(input), actionContext = await editableProject(value.project_id), { supabase } = actionContext; const { data, error } = await supabase.from("tasks").insert({ id: crypto.randomUUID(), ...value }).select().single(); if (error) throw databaseError("สร้างงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); try { await insertActivity(actionContext, data.project_id, "created", "task", data.id, { title: data.title }); } catch (activityError) { logInternalError("create_task_activity", activityError); } return data; }
-export async function getTasks(projectId: string) { const id = uuid.parse(projectId), { supabase } = await accessibleProject(id); const { data, error } = await supabase.from("tasks").select("*").eq("project_id", id).order("created_at", { ascending: false }); if (error) throw databaseError("โหลดงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); return data; }
-export async function updateTask(id: string, input: unknown, changeSummary = "Task updated") { const taskId = uuid.parse(id), value = taskInput.omit({ project_id: true }).partial().refine(v => Object.keys(v).length > 0).parse(input); const actionContext = await context(), { supabase } = actionContext; const { data: old, error: readError } = await supabase.from("tasks").select("*").eq("id", taskId).single(); if (readError || !old) throw new Error("Task not found"); const ownedContext = await editableProject(old.project_id, actionContext); const { data, error } = await supabase.from("tasks").update(value).eq("id", taskId).eq("project_id", old.project_id).select().single(); if (error) throw databaseError("แก้ไขงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); await Promise.all([insertVersion(ownedContext, versionInput.parse({ project_id: old.project_id, entity_type: "task", entity_id: taskId, old_data: old, new_data: data, change_summary: changeSummary })), insertActivity(ownedContext, old.project_id, data.status === "done" && old.status !== "done" ? "completed" : "updated", "task", taskId, value)]); return data; }
-export async function deleteTask(id: string) { const taskId = uuid.parse(id), actionContext = await context(), { supabase } = actionContext; const { data, error } = await supabase.from("tasks").select("*").eq("id", taskId).single(); if (error || !data) throw new Error("Task not found"); await editableProject(data.project_id, actionContext); await activity(data.project_id, "deleted", "task", taskId, { title: data.title }); const result = await supabase.from("tasks").delete().eq("id", taskId).eq("project_id", data.project_id); if (result.error) throw databaseError("ลบงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); }
+export async function updateProject(id: string, input: unknown) {
+  const value = projectInput.partial().refine(v => Object.keys(v).length > 0).parse(input);
+  const { supabase, user } = await context();
+  const { data, error } = await supabase.from("projects").update(value).eq("id", uuid.parse(id)).eq("user_id", user.id).select().single();
+  if (error) throw databaseError("แก้ไขโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  await activity(data.id, "updated", "project", data.id, value);
+  return data;
+}
 
-export async function createNote(input: unknown) { const value = noteInput.parse(input), actionContext = await editableProject(value.project_id), { supabase } = actionContext; const { data, error } = await supabase.from("notes").insert({ id: crypto.randomUUID(), ...value }).select().single(); if (error) throw databaseError("สร้างโน้ตไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); try { await insertActivity(actionContext, data.project_id, "created", "note", data.id, { title: data.title }); } catch (activityError) { logInternalError("create_note_activity", activityError); } return data; }
-export async function getNotes(projectId: string) { const id = uuid.parse(projectId), { supabase } = await accessibleProject(id); const { data, error } = await supabase.from("notes").select("*").eq("project_id", id).order("created_at", { ascending: false }); if (error) throw databaseError("โหลดโน้ตไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); return data; }
-export async function updateNote(id: string, input: unknown, changeSummary = "Note updated") { const noteId = uuid.parse(id), value = noteInput.omit({ project_id: true }).partial().refine(v => Object.keys(v).length > 0).parse(input); const actionContext = await context(), { supabase } = actionContext; const { data: old, error: readError } = await supabase.from("notes").select("*").eq("id", noteId).single(); if (readError || !old) throw new Error("Note not found"); const ownedContext = await editableProject(old.project_id, actionContext); const { data, error } = await supabase.from("notes").update(value).eq("id", noteId).eq("project_id", old.project_id).select().single(); if (error) throw databaseError("บันทึกโน้ตไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); await Promise.allSettled([insertVersion(ownedContext, versionInput.parse({ project_id: old.project_id, entity_type: "note", entity_id: noteId, old_data: old, new_data: data, change_summary: changeSummary })), insertActivity(ownedContext, old.project_id, "updated", "note", noteId, value)]); return data; }
+export async function deleteProject(id: string) {
+  const projectId = uuid.parse(id);
+  const { supabase, user } = await ownProject(projectId);
+  await activity(projectId, "deleted", "project", projectId, {});
+  const { error } = await supabase.from("projects").delete().eq("id", projectId).eq("user_id", user.id);
+  if (error) throw databaseError("ลบโปรเจกต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+}
+
+export async function createTask(input: unknown) {
+  const value = taskInput.parse(input);
+  const actionContext = await editableProject(value.project_id);
+  const { supabase } = actionContext;
+  const { data, error } = await supabase.from("tasks").insert({ id: crypto.randomUUID(), ...value }).select().single();
+  if (error) throw databaseError("สร้างงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  try {
+    await insertActivity(actionContext, data.project_id, "created", "task", data.id, { title: data.title });
+  } catch (activityError) {
+    logInternalError("create_task_activity", activityError);
+  }
+  return data;
+}
+
+export async function getTasks(projectId: string) {
+  const id = uuid.parse(projectId);
+  const { supabase } = await accessibleProject(id);
+  const { data, error } = await supabase.from("tasks").select("*").eq("project_id", id).order("created_at", { ascending: false });
+  if (error) throw databaseError("โหลดงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  return data;
+}
+
+export async function updateTask(id: string, input: unknown, changeSummary = "Task updated") {
+  const taskId = uuid.parse(id);
+  const value = taskInput.omit({ project_id: true }).partial().refine(v => Object.keys(v).length > 0).parse(input);
+  const actionContext = await context();
+  const { supabase } = actionContext;
+  const { data: old, error: readError } = await supabase.from("tasks").select("*").eq("id", taskId).single();
+  if (readError || !old) throw new Error("Task not found");
+  const ownedContext = await editableProject(old.project_id, actionContext);
+  const { data, error } = await supabase.from("tasks").update(value).eq("id", taskId).eq("project_id", old.project_id).select().single();
+  if (error) throw databaseError("แก้ไขงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  await Promise.all([
+    insertVersion(ownedContext, versionInput.parse({ project_id: old.project_id, entity_type: "task", entity_id: taskId, old_data: old, new_data: data, change_summary: changeSummary })),
+    insertActivity(ownedContext, old.project_id, data.status === "done" && old.status !== "done" ? "completed" : "updated", "task", taskId, value),
+  ]);
+  return data;
+}
+
+export async function deleteTask(id: string) {
+  const taskId = uuid.parse(id);
+  const actionContext = await context();
+  const { supabase } = actionContext;
+  const { data, error } = await supabase.from("tasks").select("*").eq("id", taskId).single();
+  if (error || !data) throw new Error("Task not found");
+  await editableProject(data.project_id, actionContext);
+  await activity(data.project_id, "deleted", "task", taskId, { title: data.title });
+  const result = await supabase.from("tasks").delete().eq("id", taskId).eq("project_id", data.project_id);
+  if (result.error) throw databaseError("ลบงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+}
+
+export async function createNote(input: unknown) {
+  const value = noteInput.parse(input);
+  const actionContext = await editableProject(value.project_id);
+  const { supabase } = actionContext;
+  const { data, error } = await supabase.from("notes").insert({ id: crypto.randomUUID(), ...value }).select().single();
+  if (error) throw databaseError("สร้างโน้ตไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  try {
+    await insertActivity(actionContext, data.project_id, "created", "note", data.id, { title: data.title });
+  } catch (activityError) {
+    logInternalError("create_note_activity", activityError);
+  }
+  return data;
+}
+
+export async function getNotes(projectId: string) {
+  const id = uuid.parse(projectId);
+  const { supabase } = await accessibleProject(id);
+  const { data, error } = await supabase.from("notes").select("*").eq("project_id", id).order("created_at", { ascending: false });
+  if (error) throw databaseError("โหลดโน้ตไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  return data;
+}
+
+export async function updateNote(id: string, input: unknown, changeSummary = "Note updated") {
+  const noteId = uuid.parse(id);
+  const value = noteInput.omit({ project_id: true }).partial().refine(v => Object.keys(v).length > 0).parse(input);
+  const actionContext = await context();
+  const { supabase } = actionContext;
+  const { data: old, error: readError } = await supabase.from("notes").select("*").eq("id", noteId).single();
+  if (readError || !old) throw new Error("Note not found");
+  const ownedContext = await editableProject(old.project_id, actionContext);
+  const { data, error } = await supabase.from("notes").update(value).eq("id", noteId).eq("project_id", old.project_id).select().single();
+  if (error) throw databaseError("บันทึกโน้ตไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+  await Promise.allSettled([
+    insertVersion(ownedContext, versionInput.parse({ project_id: old.project_id, entity_type: "note", entity_id: noteId, old_data: old, new_data: data, change_summary: changeSummary })),
+    insertActivity(ownedContext, old.project_id, "updated", "note", noteId, value),
+  ]);
+  return data;
+}
 
 export async function getActivityTimeline(projectId: string) { const id = uuid.parse(projectId), { supabase } = await accessibleProject(id); const { data, error } = await supabase.from("activities").select("*").eq("project_id", id).order("created_at", { ascending: false }); if (error) throw databaseError("โหลดกิจกรรมไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); return data; }
 export async function createVersion(input: unknown) { const value = versionInput.parse(input), actionContext = await editableProject(value.project_id); return insertVersion(actionContext, value); }

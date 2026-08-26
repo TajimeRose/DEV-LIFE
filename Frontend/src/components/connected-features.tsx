@@ -58,13 +58,185 @@ export function NoProject() {
   return <Card className="empty-workspace"><h1>สร้างโปรเจกต์แรกของคุณ</h1><p>งาน โน้ต และกิจกรรมจะถูกจัดเก็บแยกตามโปรเจกต์</p><form onSubmit={submit}><FormField label="ชื่อโปรเจกต์"><Input value={name} onChange={event => setName(event.target.value)} required maxLength={200} /></FormField>{error && <p className="form-error" role="alert">{error}</p>}<Button variant="primary" loading={pending}>สร้างโปรเจกต์</Button></form></Card>;
 }
 
-export function ConnectedDashboard({ project, tasks, activities, displayName }: { project: Project; tasks: Task[]; activities: Activity[]; displayName?: string }) {
-  const completed = tasks.filter(task => task.status === "done").length;
-  const progress = tasks.length ? Math.round(completed / tasks.length * 100) : 0;
+export function ConnectedDashboard({
+  project,
+  tasks,
+  activities,
+  displayName,
+}: {
+  project: Project;
+  tasks: Task[];
+  activities: Activity[];
+  displayName?: string;
+}) {
+  const completed = tasks.filter((task) => task.status === "done").length;
+  const progress = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
   const openTasks = tasks.length - completed;
-  const inReview = tasks.filter(task => task.status === "review").length;
-  const healthLabel = tasks.length === 0 ? "เริ่มต้นโปรเจกต์" : progress >= 75 ? "ใกล้เสร็จแล้ว" : progress >= 40 ? "กำลังดำเนินการ" : "อยู่ในช่วงเริ่มต้น";
-  return <><section className="project-hero"><div><Badge tone="brand">{project.status === "active" ? "กำลังดำเนินการ" : project.status ?? "ไม่ระบุสถานะ"}</Badge><h1>{project.name}</h1><p>{displayName ? `สวัสดี ${displayName} — ` : ""}ติดตามงานและกิจกรรมล่าสุดของโปรเจกต์นี้</p></div><div className="hero-actions"><Link href="/notes">เปิดโน้ต</Link><Link className="task-action-link" href="/checklists">ดูงาน</Link></div></section><nav className="project-tabs" aria-label="เมนูภายในโปรเจกต์"><Link className="active" href="/dashboard">ภาพรวม</Link><Link href="/notes">โน้ต</Link><Link href="/checklists">งาน</Link><Link href="/settings/integrations">Repository</Link><Link href="/activity">กิจกรรม</Link></nav><section className="overview-stats" aria-label="สรุปสถานะงาน"><article><span>งานทั้งหมด</span><b>{tasks.length}</b><small>งานทุกสถานะในโปรเจกต์</small></article><article><span>งานที่เปิดอยู่</span><b>{openTasks}</b><small>งานที่ยังไม่เสร็จ</small></article><article><span>เสร็จแล้ว</span><b>{completed}</b><small>งานที่ปิดเรียบร้อย</small></article><article className="overview-progress-stat"><span>ความคืบหน้า</span><b>{progress}%</b><small>คำนวณจากงานที่เสร็จทั้งหมด</small><div className="overview-progress-track" role="progressbar" aria-label="ความคืบหน้าของโปรเจกต์" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><i style={{ width: `${progress}%` }} /></div></article></section><div className="cockpit-grid"><section className="cockpit-main"><div className="section-head"><div><h2>งานล่าสุด</h2></div><Link href="/checklists">ดูงานทั้งหมด</Link></div><div className="focus-list">{tasks.length ? tasks.slice(0, 5).map((task, index) => <article key={task.id}><span className={task.status === "done" ? "task-index done" : "task-index"}>{task.status === "done" ? "เสร็จ" : String(index + 1).padStart(2, "0")}</span><div><b>{task.title}</b><small>{task.status} · {task.priority}</small></div></article>) : <p className="empty-copy">ยังไม่มีงานในโปรเจกต์นี้</p>}</div><div className="section-head activity-head"><div><h2>กิจกรรมล่าสุด</h2></div><Link href="/activity">ดูประวัติทั้งหมด</Link></div><div className="compact-activity">{activities.slice(0, 3).map(item => <article key={item.id}><i>{item.entity_type.slice(0, 2).toUpperCase()}</i><div><b>{item.action} {item.entity_type}</b><small>{item.created_at ? new Date(item.created_at).toLocaleString("th-TH") : "ไม่ทราบเวลา"}</small></div></article>)}{!activities.length && <p className="empty-copy">ยังไม่มีกิจกรรม</p>}</div></section><aside className="cockpit-side"><Card className="project-health"><div className="section-head"><div><h2>{healthLabel}</h2></div><strong>{progress}%</strong></div><div className="progress" role="progressbar" aria-label="สุขภาพโปรเจกต์" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><i style={{ width: `${progress}%` }} /></div><dl><div><dt>งานที่เปิดอยู่</dt><dd>{openTasks}</dd></div><div><dt>กำลังตรวจสอบ</dt><dd>{inReview}</dd></div><div><dt>กิจกรรมล่าสุด</dt><dd>{activities.length}</dd></div></dl><Link className="project-health-link" href="/checklists">จัดการงาน</Link></Card></aside></div></>;
+  const inReview = tasks.filter((task) => task.status === "review").length;
+  const healthLabel =
+    tasks.length === 0
+      ? "เริ่มต้นโปรเจกต์"
+      : progress >= 75
+      ? "ใกล้เสร็จแล้ว"
+      : progress >= 40
+      ? "กำลังดำเนินการ"
+      : "อยู่ในช่วงเริ่มต้น";
+
+  return (
+    <>
+      <section className="project-hero">
+        <div>
+          <Badge tone="brand">
+            {project.status === "active" ? "กำลังดำเนินการ" : project.status ?? "ไม่ระบุสถานะ"}
+          </Badge>
+          <h1>{project.name}</h1>
+          <p>{displayName ? `สวัสดี ${displayName} — ` : ""}ติดตามงานและกิจกรรมล่าสุดของโปรเจกต์นี้</p>
+        </div>
+        <div className="hero-actions">
+          <Link href="/notes">เปิดโน้ต</Link>
+          <Link className="task-action-link" href="/checklists">
+            ดูงาน
+          </Link>
+        </div>
+      </section>
+
+      <nav className="project-tabs" aria-label="เมนูภายในโปรเจกต์">
+        <Link className="active" href="/dashboard">
+          ภาพรวม
+        </Link>
+        <Link href="/notes">โน้ต</Link>
+        <Link href="/checklists">งาน</Link>
+        <Link href="/settings/integrations">Repository</Link>
+        <Link href="/activity">กิจกรรม</Link>
+      </nav>
+
+      <section className="overview-stats" aria-label="สรุปสถานะงาน">
+        <article>
+          <span>งานทั้งหมด</span>
+          <b>{tasks.length}</b>
+          <small>งานทุกสถานะในโปรเจกต์</small>
+        </article>
+        <article>
+          <span>งานที่เปิดอยู่</span>
+          <b>{openTasks}</b>
+          <small>งานที่ยังไม่เสร็จ</small>
+        </article>
+        <article>
+          <span>เสร็จแล้ว</span>
+          <b>{completed}</b>
+          <small>งานที่ปิดเรียบร้อย</small>
+        </article>
+        <article className="overview-progress-stat">
+          <span>ความคืบหน้า</span>
+          <b>{progress}%</b>
+          <small>คำนวณจากงานที่เสร็จทั้งหมด</small>
+          <div
+            className="overview-progress-track"
+            role="progressbar"
+            aria-label="ความคืบหน้าของโปรเจกต์"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+          >
+            <i style={{ width: `${progress}%` }} />
+          </div>
+        </article>
+      </section>
+
+      <div className="cockpit-grid">
+        <section className="cockpit-main">
+          <div className="section-head">
+            <div>
+              <h2>งานล่าสุด</h2>
+            </div>
+            <Link href="/checklists">ดูงานทั้งหมด</Link>
+          </div>
+          <div className="focus-list">
+            {tasks.length ? (
+              tasks.slice(0, 5).map((task, index) => (
+                <article key={task.id}>
+                  <span className={task.status === "done" ? "task-index done" : "task-index"}>
+                    {task.status === "done" ? "เสร็จ" : String(index + 1).padStart(2, "0")}
+                  </span>
+                  <div>
+                    <b>{task.title}</b>
+                    <small>
+                      {task.status} · {task.priority}
+                    </small>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <p className="empty-copy">ยังไม่มีงานในโปรเจกต์นี้</p>
+            )}
+          </div>
+
+          <div className="section-head activity-head">
+            <div>
+              <h2>กิจกรรมล่าสุด</h2>
+            </div>
+            <Link href="/activity">ดูประวัติทั้งหมด</Link>
+          </div>
+          <div className="compact-activity">
+            {activities.slice(0, 3).map((item) => (
+              <article key={item.id}>
+                <i>{item.entity_type.slice(0, 2).toUpperCase()}</i>
+                <div>
+                  <b>
+                    {item.action} {item.entity_type}
+                  </b>
+                  <small>
+                    {item.created_at
+                      ? new Date(item.created_at).toLocaleString("th-TH")
+                      : "ไม่ทราบเวลา"}
+                  </small>
+                </div>
+              </article>
+            ))}
+            {!activities.length && <p className="empty-copy">ยังไม่มีกิจกรรม</p>}
+          </div>
+        </section>
+
+        <aside className="cockpit-side">
+          <Card className="project-health">
+            <div className="section-head">
+              <div>
+                <h2>{healthLabel}</h2>
+              </div>
+              <strong>{progress}%</strong>
+            </div>
+            <div
+              className="progress"
+              role="progressbar"
+              aria-label="สุขภาพโปรเจกต์"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress}
+            >
+              <i style={{ width: `${progress}%` }} />
+            </div>
+            <dl>
+              <div>
+                <dt>งานที่เปิดอยู่</dt>
+                <dd>{openTasks}</dd>
+              </div>
+              <div>
+                <dt>กำลังตรวจสอบ</dt>
+                <dd>{inReview}</dd>
+              </div>
+              <div>
+                <dt>กิจกรรมล่าสุด</dt>
+                <dd>{activities.length}</dd>
+              </div>
+            </dl>
+            <Link className="project-health-link" href="/checklists">
+              จัดการงาน
+            </Link>
+          </Card>
+        </aside>
+      </div>
+    </>
+  );
 }
 
 function priorityLabel(priority: string) {
@@ -282,7 +454,15 @@ export function TaskDetailModal({
   );
 }
 
-export function ConnectedTasks({ project, initial, role = "owner" }: { project: Project; initial: Task[]; role?: string }) {
+export function ConnectedTasks({
+  project,
+  initial,
+  role = "owner",
+}: {
+  project: Project;
+  initial: Task[];
+  role?: string;
+}) {
   const [tasks, setTasks] = useState(initial);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState("ทั่วไป");
@@ -290,141 +470,255 @@ export function ConnectedTasks({ project, initial, role = "owner" }: { project: 
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const editable = canEditProject(role);
+
   useProjectRealtime("tasks", project.id, () => void getTasks(project.id).then(setTasks));
+
   const add = (event: FormEvent) => {
     event.preventDefault();
     if (!editable || !title.trim() || pending) return;
     setError("");
     startTransition(async () => {
       try {
-        const task = await createTask({ project_id: project.id, title, description: "", status: "todo", priority });
-        setTasks(current => [task, ...current]);
+        const task = await createTask({
+          project_id: project.id,
+          title,
+          description: "",
+          status: "todo",
+          priority,
+        });
+        setTasks((current) => [task, ...current]);
         setTitle("");
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "เพิ่มงานไม่สำเร็จ");
       }
     });
   };
+
   const toggle = (task: Task) => {
     if (!editable || pending) return;
     const status = task.status === "done" ? "todo" : "done";
-    setTasks(current => current.map(item => item.id === task.id ? { ...item, status } : item));
+    setTasks((current) =>
+      current.map((item) => (item.id === task.id ? { ...item, status } : item)),
+    );
     startTransition(async () => {
       try {
         const updated = await updateTask(task.id, { status });
-        setTasks(current => current.map(item => item.id === updated.id ? updated : item));
+        setTasks((current) =>
+          current.map((item) => (item.id === updated.id ? updated : item)),
+        );
       } catch (cause) {
-        setTasks(current => current.map(item => item.id === task.id ? task : item));
+        setTasks((current) =>
+          current.map((item) => (item.id === task.id ? task : item)),
+        );
         setError(cause instanceof Error ? cause.message : "อัปเดตงานไม่สำเร็จ");
       }
     });
   };
+
   const changePriority = (task: Task, nextPriority: string) => {
     if (!editable || pending || priorityLabel(task.priority) === nextPriority) return;
     setError("");
-    setTasks(current => current.map(item => item.id === task.id ? { ...item, priority: nextPriority } : item));
+    setTasks((current) =>
+      current.map((item) =>
+        item.id === task.id ? { ...item, priority: nextPriority } : item,
+      ),
+    );
     startTransition(async () => {
       try {
-        const updated = await updateTask(task.id, { priority: nextPriority }, `เปลี่ยนความสำคัญเป็น ${nextPriority}`);
-        setTasks(current => current.map(item => item.id === updated.id ? updated : item));
+        const updated = await updateTask(
+          task.id,
+          { priority: nextPriority },
+          `เปลี่ยนความสำคัญเป็น ${nextPriority}`,
+        );
+        setTasks((current) =>
+          current.map((item) => (item.id === updated.id ? updated : item)),
+        );
       } catch (cause) {
-        setTasks(current => current.map(item => item.id === task.id ? task : item));
+        setTasks((current) =>
+          current.map((item) => (item.id === task.id ? task : item)),
+        );
         setError(cause instanceof Error ? cause.message : "เปลี่ยนความสำคัญไม่สำเร็จ");
       }
     });
   };
-  return <>
-    <div className="heading">
-      <div>
-        <small>งาน</small>
-        <h1>{project.name}</h1>
-        <p>จัดลำดับความสำคัญและติดตามงานทั้งหมด (คลิกที่ชื่องานเพื่อดูรายละเอียด)</p>
+
+  return (
+    <>
+      <div className="heading">
+        <div>
+          <small>งาน</small>
+          <h1>{project.name}</h1>
+          <p>จัดลำดับความสำคัญและติดตามงานทั้งหมด (คลิกที่ชื่องานเพื่อดูรายละเอียด)</p>
+        </div>
+        <Link className="view-board" href="/board">
+          ดูแบบบอร์ด
+        </Link>
       </div>
-      <Link className="view-board" href="/board">ดูแบบบอร์ด</Link>
-    </div>
-    <section className="panel feature-panel">
-      <div className="checklist">
-        {!editable && <p className="form-hint" role="status">คุณมีสิทธิ์อ่านอย่างเดียวในโปรเจกต์นี้</p>}
-        {tasks.map(task => (
-          <div className="task" key={task.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
-              <input disabled={!editable || pending} aria-label={`ทำเครื่องหมาย ${task.title}`} type="checkbox" checked={task.status === "done"} onChange={() => toggle(task)} />
-              <button
-                type="button"
-                onClick={() => setSelectedTask(task)}
+
+      <section className="panel feature-panel">
+        <div className="checklist">
+          {!editable && (
+            <p className="form-hint" role="status">
+              คุณมีสิทธิ์อ่านอย่างเดียวในโปรเจกต์นี้
+            </p>
+          )}
+          {tasks.map((task) => (
+            <div
+              className="task"
+              key={task.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+              }}
+            >
+              <div
                 style={{
-                  background: "none",
-                  border: "none",
-                  padding: 0,
-                  textAlign: "left",
-                  cursor: "pointer",
-                  color: "inherit",
-                  font: "inherit",
                   display: "flex",
-                  flexDirection: "column",
-                  gap: "2px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  alignItems: "center",
+                  gap: "10px",
+                  flex: 1,
+                  minWidth: 0,
                 }}
               >
-                <span className={task.status === "done" ? "strike" : ""} style={{ fontWeight: 600 }}>
-                  {task.title}
-                </span>
-                <div style={{ display: "flex", gap: "6px", alignItems: "center", fontSize: "11px", color: "var(--muted)" }}>
-                  {task.due_date && <span>📅 {task.due_date}</span>}
-                  {task.branch_name && <span>🌿 {task.branch_name}</span>}
-                  {task.linked_pull_request_number && <span>🔀 #{task.linked_pull_request_number}</span>}
-                </div>
-              </button>
+                <input
+                  disabled={!editable || pending}
+                  aria-label={`ทำเครื่องหมาย ${task.title}`}
+                  type="checkbox"
+                  checked={task.status === "done"}
+                  onChange={() => toggle(task)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setSelectedTask(task)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    color: "inherit",
+                    font: "inherit",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "2px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  <span
+                    className={task.status === "done" ? "strike" : ""}
+                    style={{ fontWeight: 600 }}
+                  >
+                    {task.title}
+                  </span>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "6px",
+                      alignItems: "center",
+                      fontSize: "11px",
+                      color: "var(--muted)",
+                    }}
+                  >
+                    {task.due_date && <span>📅 {task.due_date}</span>}
+                    {task.branch_name && <span>🌿 {task.branch_name}</span>}
+                    {task.linked_pull_request_number && (
+                      <span>🔀 #{task.linked_pull_request_number}</span>
+                    )}
+                  </div>
+                </button>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Select
+                  disabled={!editable || pending}
+                  className={`task-priority-select ${priorityClass(task.priority)}`}
+                  aria-label={`ความสำคัญของ ${task.title}`}
+                  value={priorityLabel(task.priority)}
+                  onChange={(event) => changePriority(task, event.target.value)}
+                >
+                  <option>ทั่วไป</option>
+                  <option>สำคัญ</option>
+                  <option>สำคัญมาก</option>
+                </Select>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedTask(task)}>
+                  แก้ไข
+                </Button>
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Select disabled={!editable || pending} className={`task-priority-select ${priorityClass(task.priority)}`} aria-label={`ความสำคัญของ ${task.title}`} value={priorityLabel(task.priority)} onChange={event => changePriority(task, event.target.value)}>
+          ))}
+          {!tasks.length && <p className="empty-copy">ยังไม่มีงาน</p>}
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          {editable && (
+            <form className="task-form" onSubmit={add}>
+              <Input
+                aria-label="ชื่องาน"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="เพิ่มงาน…"
+                required
+              />
+              <Select
+                aria-label="ความสำคัญ"
+                value={priority}
+                onChange={(event) => setPriority(event.target.value)}
+              >
                 <option>ทั่วไป</option>
                 <option>สำคัญ</option>
                 <option>สำคัญมาก</option>
               </Select>
-              <Button size="sm" variant="ghost" onClick={() => setSelectedTask(task)}>
-                แก้ไข
+              <Button variant="primary" loading={pending}>
+                เพิ่มงาน
               </Button>
-            </div>
-          </div>
-        ))}
-        {!tasks.length && <p className="empty-copy">ยังไม่มีงาน</p>}
-        {error && <p className="form-error" role="alert">{error}</p>}
-        {editable && (
-          <form className="task-form" onSubmit={add}>
-            <Input aria-label="ชื่องาน" value={title} onChange={event => setTitle(event.target.value)} placeholder="เพิ่มงาน…" required />
-            <Select aria-label="ความสำคัญ" value={priority} onChange={event => setPriority(event.target.value)}>
-              <option>ทั่วไป</option>
-              <option>สำคัญ</option>
-              <option>สำคัญมาก</option>
-            </Select>
-            <Button variant="primary" loading={pending}>เพิ่มงาน</Button>
-          </form>
-        )}
-      </div>
-    </section>
+            </form>
+          )}
+        </div>
+      </section>
 
-    <TaskDetailModal
-      task={selectedTask}
-      open={Boolean(selectedTask)}
-      onClose={() => setSelectedTask(null)}
-      editable={editable}
-      onUpdate={(updated) => setTasks(current => current.map(item => item.id === updated.id ? updated : item))}
-      onDelete={(id) => setTasks(current => current.filter(item => item.id !== id))}
-    />
-  </>;
+      <TaskDetailModal
+        task={selectedTask}
+        open={Boolean(selectedTask)}
+        onClose={() => setSelectedTask(null)}
+        editable={editable}
+        onUpdate={(updated) =>
+          setTasks((current) =>
+            current.map((item) => (item.id === updated.id ? updated : item)),
+          )
+        }
+        onDelete={(id) => setTasks((current) => current.filter((item) => item.id !== id))}
+      />
+    </>
+  );
 }
 
-function noteText(content: Note["content"]) { return typeof content === "string" ? content : JSON.stringify(content, null, 2); }
+function noteText(content: Note["content"]) {
+  return typeof content === "string" ? content : JSON.stringify(content, null, 2);
+}
 
-export function ConnectedNotes({ project, initial, role = "owner" }: { project: Project; initial: Note[]; role?: string }) {
+export function ConnectedNotes({
+  project,
+  initial,
+  role = "owner",
+}: {
+  project: Project;
+  initial: Note[];
+  role?: string;
+}) {
   const [notes, setNotes] = useState(initial);
   const [selectedId, setSelectedId] = useState(initial[0]?.id ?? "");
-  const [savedSnapshots, setSavedSnapshots] = useState(() => Object.fromEntries(initial.map(note => [note.id, `${note.title}\n${noteText(note.content)}`])));
+  const [savedSnapshots, setSavedSnapshots] = useState(() =>
+    Object.fromEntries(
+      initial.map((note) => [note.id, `${note.title}\n${noteText(note.content)}`]),
+    ),
+  );
   const [nextId, setNextId] = useState("");
   const [confirmSwitch, setConfirmSwitch] = useState(false);
-  const selected = notes.find(note => note.id === selectedId);
+  const selected = notes.find((note) => note.id === selectedId);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const editorRef = useRef<HTMLTextAreaElement>(null);
@@ -432,71 +726,136 @@ export function ConnectedNotes({ project, initial, role = "owner" }: { project: 
   const editable = canEditProject(role);
   const snapshot = selected ? `${selected.title}\n${noteText(selected.content)}` : "";
   const dirty = Boolean(selected && savedSnapshots[selected.id] !== snapshot);
-  useProjectRealtime("notes", project.id, () => void getNotes(project.id).then(next => {
-    if (dirty) return;
-    setNotes(next);
-    setSavedSnapshots(Object.fromEntries(next.map(note => [note.id, `${note.title}\n${noteText(note.content)}`])));
-  }));
+
+  useProjectRealtime("notes", project.id, () =>
+    void getNotes(project.id).then((next) => {
+      if (dirty) return;
+      setNotes(next);
+      setSavedSnapshots(
+        Object.fromEntries(
+          next.map((note) => [note.id, `${note.title}\n${noteText(note.content)}`]),
+        ),
+      );
+    }),
+  );
+
   useEffect(() => {
-    const beforeUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (dirty) event.preventDefault();
+    };
     window.addEventListener("beforeunload", beforeUnload);
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [dirty]);
+
   const create = () => {
     if (!editable || pending) return;
-    if (dirty) { setNextId("__new__"); setConfirmSwitch(true); return; }
+    if (dirty) {
+      setNextId("__new__");
+      setConfirmSwitch(true);
+      return;
+    }
     setError("");
     startTransition(async () => {
       try {
-        const note = await createNote({ project_id: project.id, title: "โน้ตใหม่", content: "" });
-        setNotes(current => [note, ...current]);
-        setSavedSnapshots(current => ({ ...current, [note.id]: `${note.title}\n${noteText(note.content)}` }));
+        const note = await createNote({
+          project_id: project.id,
+          title: "โน้ตใหม่",
+          content: "",
+        });
+        setNotes((current) => [note, ...current]);
+        setSavedSnapshots((current) => ({
+          ...current,
+          [note.id]: `${note.title}\n${noteText(note.content)}`,
+        }));
         setSelectedId(note.id);
-      } catch (cause) { setError(cause instanceof Error ? cause.message : "สร้างโน้ตไม่สำเร็จ"); }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "สร้างโน้ตไม่สำเร็จ");
+      }
     });
   };
-  const choose = (id: string) => { if (id === selectedId) return; if (dirty) { setNextId(id); setConfirmSwitch(true); } else setSelectedId(id); };
+
+  const choose = (id: string) => {
+    if (id === selectedId) return;
+    if (dirty) {
+      setNextId(id);
+      setConfirmSwitch(true);
+    } else setSelectedId(id);
+  };
+
   const discardAndSwitch = () => {
     if (selected) {
-      const original = initial.find(note => note.id === selected.id);
+      const original = initial.find((note) => note.id === selected.id);
       const saved = savedSnapshots[selected.id];
       const split = saved?.indexOf("\n") ?? -1;
-      if (original && split >= 0) setNotes(current => current.map(note => note.id === selected.id ? { ...note, title: saved.slice(0, split), content: saved.slice(split + 1) } : note));
+      if (original && split >= 0)
+        setNotes((current) =>
+          current.map((note) =>
+            note.id === selected.id
+              ? { ...note, title: saved.slice(0, split), content: saved.slice(split + 1) }
+              : note,
+          ),
+        );
     }
     const target = nextId;
     setConfirmSwitch(false);
     setNextId("");
-    if (target === "__new__") window.setTimeout(create, 0); else setSelectedId(target);
+    if (target === "__new__") window.setTimeout(create, 0);
+    else setSelectedId(target);
   };
-  const patch = (input: { title?: string; content?: string }) => { if (editable && selected && !pending) setNotes(current => current.map(note => note.id === selected.id ? { ...note, ...input } : note)); };
-  const save = useCallback((notify = true) => {
-    if (!editable || !selected || !(selected.title ?? "").trim() || pending) return;
-    const savingSnapshot = `${selected.title ?? ""}\n${noteText(selected.content)}`;
-    setError("");
-    startTransition(async () => {
-      try {
-        const updated = await updateNote(selected.id, { title: selected.title ?? "", content: noteText(selected.content) });
-        setNotes(current => current.map(note => {
-          if (note.id !== updated.id) return note;
-          const currentSnapshot = `${note.title}\n${noteText(note.content)}`;
-          return currentSnapshot === savingSnapshot ? updated : { ...updated, title: note.title, content: note.content };
-        }));
-        setSavedSnapshots(current => ({ ...current, [updated.id]: `${updated.title}\n${noteText(updated.content)}` }));
-        if (notify) toast("บันทึกโน้ตแล้ว");
-      } catch (cause) { setError(cause instanceof Error ? cause.message : "บันทึกโน้ตไม่สำเร็จ"); }
-    });
-  }, [editable, pending, selected, setError, setNotes, setSavedSnapshots, startTransition, toast]);
+
+  const patch = (input: { title?: string; content?: string }) => {
+    if (editable && selected && !pending)
+      setNotes((current) =>
+        current.map((note) => (note.id === selected.id ? { ...note, ...input } : note)),
+      );
+  };
+
+  const save = useCallback(
+    (notify = true) => {
+      if (!editable || !selected || !(selected.title ?? "").trim() || pending) return;
+      const savingSnapshot = `${selected.title ?? ""}\n${noteText(selected.content)}`;
+      setError("");
+      startTransition(async () => {
+        try {
+          const updated = await updateNote(selected.id, {
+            title: selected.title ?? "",
+            content: noteText(selected.content),
+          });
+          setNotes((current) =>
+            current.map((note) => {
+              if (note.id !== updated.id) return note;
+              const currentSnapshot = `${note.title}\n${noteText(note.content)}`;
+              return currentSnapshot === savingSnapshot
+                ? updated
+                : { ...updated, title: note.title, content: note.content };
+            }),
+          );
+          setSavedSnapshots((current) => ({
+            ...current,
+            [updated.id]: `${updated.title}\n${noteText(updated.content)}`,
+          }));
+          if (notify) toast("บันทึกโน้ตแล้ว");
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : "บันทึกโน้ตไม่สำเร็จ");
+        }
+      });
+    },
+    [editable, pending, selected, setError, setNotes, setSavedSnapshots, startTransition, toast],
+  );
+
   useEffect(() => {
     if (!dirty || pending || !(selected?.title ?? "").trim()) return;
     const timer = window.setTimeout(() => save(false), 1000);
     return () => window.clearTimeout(timer);
   }, [dirty, pending, save, selected?.title]);
+
   const saveShortcut = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       if (dirty) save();
     }
   };
+
   const editorKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     saveShortcut(event);
     if (event.key !== "Tab" || event.ctrlKey || event.metaKey || event.altKey) return;
@@ -510,18 +869,203 @@ export function ConnectedNotes({ project, initial, role = "owner" }: { project: 
       editorRef.current?.setSelectionRange(start + 1, start + 1);
     });
   };
-  return <><div className="heading"><div><small>โน้ต</small><h1>{project.name}</h1><p>บันทึกอัตโนมัติหลังหยุดพิมพ์ หรือกด Ctrl/Cmd + S เพื่อบันทึกทันที</p></div><Button type="button" variant="primary" onClick={create} loading={pending}>สร้างโน้ต</Button></div>{error && <p className="form-error" role="alert">{error}</p>}<div className={`notes-grid connected-notes ${selected ? "has-selection" : ""}`}><aside className="panel note-list"><div className="note-list-header"><h2>โน้ตทั้งหมด</h2><Badge tone="neutral">{notes.length}</Badge></div><div className="note-list-items">{notes.map(note => <Button variant="ghost" className={`note-item ${note.id === selectedId ? "active" : ""}`} key={note.id} onClick={() => choose(note.id)}><b>{note.title || "ไม่มีชื่อ"}</b><small>{note.created_at ? new Date(note.created_at).toLocaleDateString("th-TH") : "ไม่ทราบวันที่"}</small></Button>)}{!notes.length && <EmptyState title="ยังไม่มีโน้ต" description="สร้างโน้ตแรกเพื่อเก็บบริบทของโปรเจกต์" />}</div></aside><section className="note-editor-shell">{selected ? <><div className="note-editor-header"><Button className="note-mobile-back" variant="ghost" size="sm" onClick={() => choose("")}>กลับ</Button><Input className="note-title-input" aria-label="ชื่อโน้ต" value={selected.title ?? ""} onChange={event => patch({ title: event.target.value })} onKeyDown={saveShortcut} required /><span className={`save-state ${pending ? "" : dirty ? "dirty" : "saved"}`} aria-live="polite">{pending ? "กำลังบันทึก…" : dirty ? "รอบันทึกอัตโนมัติ" : "อัปเดตแล้ว"}</span><Button className="note-save-button" onClick={() => save()} loading={pending} disabled={!dirty || !(selected.title ?? "").trim()}>บันทึก</Button></div><Textarea ref={editorRef} aria-label="เนื้อหาโน้ต" className="note-editor-textarea" value={noteText(selected.content)} onChange={event => patch({ content: event.target.value })} onKeyDown={editorKeyDown} placeholder="เริ่มเขียนบริบท แนวคิด หรือรายละเอียดทางเทคนิค…" /></> : <div className="empty-editor"><EmptyState title="เลือกโน้ตเพื่อเริ่มเขียน" description="หรือสร้างโน้ตใหม่สำหรับโปรเจกต์นี้" action={<Button variant="primary" onClick={create}>สร้างโน้ต</Button>} /></div>}</section></div><Modal open={confirmSwitch} onClose={() => setConfirmSwitch(false)} title="ยังไม่ได้บันทึกการแก้ไข" description="หากเปลี่ยนโน้ตตอนนี้ การแก้ไขล่าสุดจะหายไป" footer={<><Button onClick={() => setConfirmSwitch(false)}>เขียนต่อ</Button><Button variant="danger" onClick={discardAndSwitch}>ละทิ้งและเปลี่ยน</Button></>}><p>บันทึกโน้ตนี้ก่อนเพื่อเก็บการเปลี่ยนแปลงอย่างปลอดภัย</p></Modal></>;
+
+  return (
+    <>
+      <div className="heading">
+        <div>
+          <small>โน้ต</small>
+          <h1>{project.name}</h1>
+          <p>บันทึกอัตโนมัติหลังหยุดพิมพ์ หรือกด Ctrl/Cmd + S เพื่อบันทึกทันที</p>
+        </div>
+        <Button type="button" variant="primary" onClick={create} loading={pending}>
+          สร้างโน้ต
+        </Button>
+      </div>
+
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      <div className={`notes-grid connected-notes ${selected ? "has-selection" : ""}`}>
+        <aside className="panel note-list">
+          <div className="note-list-header">
+            <h2>โน้ตทั้งหมด</h2>
+            <Badge tone="neutral">{notes.length}</Badge>
+          </div>
+          <div className="note-list-items">
+            {notes.map((note) => (
+              <Button
+                variant="ghost"
+                className={`note-item ${note.id === selectedId ? "active" : ""}`}
+                key={note.id}
+                onClick={() => choose(note.id)}
+              >
+                <b>{note.title || "ไม่มีชื่อ"}</b>
+                <small>
+                  {note.created_at
+                    ? new Date(note.created_at).toLocaleDateString("th-TH")
+                    : "ไม่ทราบวันที่"}
+                </small>
+              </Button>
+            ))}
+            {!notes.length && (
+              <EmptyState
+                title="ยังไม่มีโน้ต"
+                description="สร้างโน้ตแรกเพื่อเก็บบริบทของโปรเจกต์"
+              />
+            )}
+          </div>
+        </aside>
+
+        <section className="note-editor-shell">
+          {selected ? (
+            <>
+              <div className="note-editor-header">
+                <Button
+                  className="note-mobile-back"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => choose("")}
+                >
+                  กลับ
+                </Button>
+                <Input
+                  className="note-title-input"
+                  aria-label="ชื่อโน้ต"
+                  value={selected.title ?? ""}
+                  onChange={(event) => patch({ title: event.target.value })}
+                  onKeyDown={saveShortcut}
+                  required
+                />
+                <span
+                  className={`save-state ${pending ? "" : dirty ? "dirty" : "saved"}`}
+                  aria-live="polite"
+                >
+                  {pending ? "กำลังบันทึก…" : dirty ? "รอบันทึกอัตโนมัติ" : "อัปเดตแล้ว"}
+                </span>
+                <Button
+                  className="note-save-button"
+                  onClick={() => save()}
+                  loading={pending}
+                  disabled={!dirty || !(selected.title ?? "").trim()}
+                >
+                  บันทึก
+                </Button>
+              </div>
+              <Textarea
+                ref={editorRef}
+                aria-label="เนื้อหาโน้ต"
+                className="note-editor-textarea"
+                value={noteText(selected.content)}
+                onChange={(event) => patch({ content: event.target.value })}
+                onKeyDown={editorKeyDown}
+                placeholder="เริ่มเขียนบริบท แนวคิด หรือรายละเอียดทางเทคนิค…"
+              />
+            </>
+          ) : (
+            <div className="empty-editor">
+              <EmptyState
+                title="เลือกโน้ตเพื่อเริ่มเขียน"
+                description="หรือสร้างโน้ตใหม่สำหรับโปรเจกต์นี้"
+                action={
+                  <Button variant="primary" onClick={create}>
+                    สร้างโน้ต
+                  </Button>
+                }
+              />
+            </div>
+          )}
+        </section>
+      </div>
+
+      <Modal
+        open={confirmSwitch}
+        onClose={() => setConfirmSwitch(false)}
+        title="ยังไม่ได้บันทึกการแก้ไข"
+        description="หากเปลี่ยนโน้ตตอนนี้ การแก้ไขล่าสุดจะหายไป"
+        footer={
+          <>
+            <Button onClick={() => setConfirmSwitch(false)}>เขียนต่อ</Button>
+            <Button variant="danger" onClick={discardAndSwitch}>
+              ละทิ้งและเปลี่ยน
+            </Button>
+          </>
+        }
+      >
+        <p>บันทึกโน้ตนี้ก่อนเพื่อเก็บการเปลี่ยนแปลงอย่างปลอดภัย</p>
+      </Modal>
+    </>
+  );
 }
 
-export function ConnectedActivity({ project, activities, repositoryActivities = [] }: { project: Project; activities: Activity[]; repositoryActivities?: ProjectActivity[] }) {
+export function ConnectedActivity({
+  project,
+  activities,
+  repositoryActivities = [],
+}: {
+  project: Project;
+  activities: Activity[];
+  repositoryActivities?: ProjectActivity[];
+}) {
   const items = [
-    ...activities.map(item => ({ id: `activity:${item.id}`, title: `${item.action} ${item.entity_type}`, date: item.created_at })),
-    ...repositoryActivities.map(item => ({ id: `repository:${item.id}`, title: item.title, date: item.occurred_at })),
-  ].sort((left, right) => new Date(right.date ?? 0).getTime() - new Date(left.date ?? 0).getTime());
-  return <><div className="heading"><div><small>กิจกรรม</small><h1>{project.name}</h1><p>ประวัติการเปลี่ยนแปลงของโปรเจกต์</p></div></div><section className="panel feature-panel"><div className="timeline">{items.map(item => <div key={item.id}><span /><section><b>{item.title}</b><small>{item.date ? new Date(item.date).toLocaleString("th-TH") : "ไม่ทราบเวลา"}</small></section></div>)}{!items.length && <p className="empty-copy">ยังไม่มีกิจกรรม</p>}</div></section></>;
+    ...activities.map((item) => ({
+      id: `activity:${item.id}`,
+      title: `${item.action} ${item.entity_type}`,
+      date: item.created_at,
+    })),
+    ...repositoryActivities.map((item) => ({
+      id: `repository:${item.id}`,
+      title: item.title,
+      date: item.occurred_at,
+    })),
+  ].sort(
+    (left, right) =>
+      new Date(right.date ?? 0).getTime() - new Date(left.date ?? 0).getTime(),
+  );
+
+  return (
+    <>
+      <div className="heading">
+        <div>
+          <small>กิจกรรม</small>
+          <h1>{project.name}</h1>
+          <p>ประวัติการเปลี่ยนแปลงของโปรเจกต์</p>
+        </div>
+      </div>
+      <section className="panel feature-panel">
+        <div className="timeline">
+          {items.map((item) => (
+            <div key={item.id}>
+              <span />
+              <section>
+                <b>{item.title}</b>
+                <small>
+                  {item.date
+                    ? new Date(item.date).toLocaleString("th-TH")
+                    : "ไม่ทราบเวลา"}
+                </small>
+              </section>
+            </div>
+          ))}
+          {!items.length && <p className="empty-copy">ยังไม่มีกิจกรรม</p>}
+        </div>
+      </section>
+    </>
+  );
 }
 
-export function ConnectedBoard({ project, initial, role = "owner" }: { project: Project; initial: Task[]; role?: string }) {
+export function ConnectedBoard({
+  project,
+  initial,
+  role = "owner",
+}: {
+  project: Project;
+  initial: Task[];
+  role?: string;
+}) {
   const statuses = ["todo", "in_progress", "review", "done"] as const;
   const labels = { todo: "รอทำ", in_progress: "กำลังทำ", review: "ตรวจสอบ", done: "เสร็จแล้ว" };
   const [tasks, setTasks] = useState(initial);
@@ -531,24 +1075,39 @@ export function ConnectedBoard({ project, initial, role = "owner" }: { project: 
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const editable = canEditProject(role);
+
   useProjectRealtime("tasks", project.id, () => void getTasks(project.id).then(setTasks));
+
   const move = (taskId: string, status: string) => {
     if (!editable || pending) return;
-    const task = tasks.find(item => item.id === taskId);
+    const task = tasks.find((item) => item.id === taskId);
     if (!task || task.status === status) return;
     setError("");
-    setTasks(current => current.map(item => item.id === taskId ? { ...item, status } : item));
+    setTasks((current) =>
+      current.map((item) => (item.id === taskId ? { ...item, status } : item)),
+    );
     startTransition(async () => {
       try {
-        const updated = await updateTask(taskId, { status }, `ย้ายงานไป ${labels[status as keyof typeof labels]}`);
-        setTasks(current => current.map(item => item.id === updated.id ? updated : item));
+        const updated = await updateTask(
+          taskId,
+          { status },
+          `ย้ายงานไป ${labels[status as keyof typeof labels]}`,
+        );
+        setTasks((current) =>
+          current.map((item) => (item.id === updated.id ? updated : item)),
+        );
       } catch (cause) {
-        setTasks(current => current.map(item => item.id === taskId ? task : item));
+        setTasks((current) =>
+          current.map((item) => (item.id === taskId ? task : item)),
+        );
         setError(cause instanceof Error ? cause.message : "ย้ายงานไม่สำเร็จ");
       }
     });
   };
-  const cardColor = (id: string) => [...id].reduce((total, character) => total + character.charCodeAt(0), 0) % 5;
+
+  const cardColor = (id: string) =>
+    [...id].reduce((total, character) => total + character.charCodeAt(0), 0) % 5;
+
   return (
     <>
       <div className="heading">
@@ -557,62 +1116,105 @@ export function ConnectedBoard({ project, initial, role = "owner" }: { project: 
           <h1>{project.name}</h1>
           <p>ลากการ์ดหรือคลิกการ์ดเพื่อดูรายละเอียดและแก้ไข</p>
         </div>
-        <Link className="view-board" href="/checklists">ดูแบบรายการ</Link>
+        <Link className="view-board" href="/checklists">
+          ดูแบบรายการ
+        </Link>
       </div>
-      {!editable && <p className="form-hint" role="status">คุณมีสิทธิ์อ่านอย่างเดียวในโปรเจกต์นี้</p>}
-      {error && <p className="form-error board-error" role="alert">{error}</p>}
+      {!editable && (
+        <p className="form-hint" role="status">
+          คุณมีสิทธิ์อ่านอย่างเดียวในโปรเจกต์นี้
+        </p>
+      )}
+      {error && (
+        <p className="form-error board-error" role="alert">
+          {error}
+        </p>
+      )}
       <div className="kanban">
-        {statuses.map(status => (
+        {statuses.map((status) => (
           <section
             className={over === status ? "drop-active" : ""}
             key={status}
-            onDragOver={event => { event.preventDefault(); if (editable) setOver(status); }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (editable) setOver(status);
+            }}
             onDragLeave={() => setOver("")}
-            onDrop={event => { event.preventDefault(); move(event.dataTransfer.getData("text/plain"), status); setDragging(""); setOver(""); }}
+            onDrop={(event) => {
+              event.preventDefault();
+              move(event.dataTransfer.getData("text/plain"), status);
+              setDragging("");
+              setOver("");
+            }}
           >
             <div className="column-title">
               <h2>{labels[status]}</h2>
-              <span>{tasks.filter(task => task.status === status).length}</span>
+              <span>{tasks.filter((task) => task.status === status).length}</span>
             </div>
-            {tasks.filter(task => task.status === status).map(task => (
-              <article
-                className={`board-card board-card-color-${cardColor(task.id)} ${dragging === task.id ? "dragging" : ""}`}
-                draggable={editable && !pending}
-                key={task.id}
-                onDragStart={event => { if (!editable) return; event.dataTransfer.setData("text/plain", task.id); setDragging(task.id); }}
-                onDragEnd={() => { setDragging(""); setOver(""); }}
-                style={{ cursor: "pointer" }}
-                onClick={(e) => {
-                  // If clicking select element, don't open modal
-                  if ((e.target as HTMLElement).tagName.toLowerCase() === "select") return;
-                  setSelectedTask(task);
-                }}
-              >
-                <div className="board-card-head">
-                  <small className={`priority ${priorityClass(task.priority)}`}>{priorityLabel(task.priority)}</small>
-                  <span className="board-card-grip">ลากเพื่อย้าย</span>
-                </div>
-                <b>{task.title}</b>
-                {task.description && <span className="board-card-description">{task.description}</span>}
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", fontSize: "11px", color: "var(--muted)", margin: "4px 0" }}>
-                  {task.due_date && <span>📅 {task.due_date}</span>}
-                  {task.branch_name && <span>🌿 {task.branch_name}</span>}
-                  {task.linked_pull_request_number && <span>🔀 #{task.linked_pull_request_number}</span>}
-                </div>
-                <Select
-                  disabled={!editable || pending}
-                  aria-label={`ย้าย ${task.title}`}
-                  value={task.status}
-                  onChange={event => move(task.id, event.target.value)}
-                  onClick={(e) => e.stopPropagation()}
+            {tasks
+              .filter((task) => task.status === status)
+              .map((task) => (
+                <article
+                  className={`board-card board-card-color-${cardColor(task.id)} ${
+                    dragging === task.id ? "dragging" : ""
+                  }`}
+                  draggable={editable && !pending}
+                  key={task.id}
+                  onDragStart={(event) => {
+                    if (!editable) return;
+                    event.dataTransfer.setData("text/plain", task.id);
+                    setDragging(task.id);
+                  }}
+                  onDragEnd={() => {
+                    setDragging("");
+                    setOver("");
+                  }}
+                  style={{ cursor: "pointer" }}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).tagName.toLowerCase() === "select") return;
+                    setSelectedTask(task);
+                  }}
                 >
-                  <option value="todo">รอทำ</option>
-                  <option value="in_progress">กำลังทำ</option>
-                  <option value="review">ตรวจสอบ</option>
-                  <option value="done">เสร็จแล้ว</option>
-                </Select>
-              </article>
-            ))}
+                  <div className="board-card-head">
+                    <small className={`priority ${priorityClass(task.priority)}`}>
+                      {priorityLabel(task.priority)}
+                    </small>
+                    <span className="board-card-grip">ลากเพื่อย้าย</span>
+                  </div>
+                  <b>{task.title}</b>
+                  {task.description && (
+                    <span className="board-card-description">{task.description}</span>
+                  )}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "6px",
+                      flexWrap: "wrap",
+                      fontSize: "11px",
+                      color: "var(--muted)",
+                      margin: "4px 0",
+                    }}
+                  >
+                    {task.due_date && <span>📅 {task.due_date}</span>}
+                    {task.branch_name && <span>🌿 {task.branch_name}</span>}
+                    {task.linked_pull_request_number && (
+                      <span>🔀 #{task.linked_pull_request_number}</span>
+                    )}
+                  </div>
+                  <Select
+                    disabled={!editable || pending}
+                    aria-label={`ย้าย ${task.title}`}
+                    value={task.status}
+                    onChange={(event) => move(task.id, event.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <option value="todo">รอทำ</option>
+                    <option value="in_progress">กำลังทำ</option>
+                    <option value="review">ตรวจสอบ</option>
+                    <option value="done">เสร็จแล้ว</option>
+                  </Select>
+                </article>
+              ))}
           </section>
         ))}
       </div>
@@ -622,8 +1224,12 @@ export function ConnectedBoard({ project, initial, role = "owner" }: { project: 
         open={Boolean(selectedTask)}
         onClose={() => setSelectedTask(null)}
         editable={editable}
-        onUpdate={(updated) => setTasks(current => current.map(item => item.id === updated.id ? updated : item))}
-        onDelete={(id) => setTasks(current => current.filter(item => item.id !== id))}
+        onUpdate={(updated) =>
+          setTasks((current) =>
+            current.map((item) => (item.id === updated.id ? updated : item)),
+          )
+        }
+        onDelete={(id) => setTasks((current) => current.filter((item) => item.id !== id))}
       />
     </>
   );
@@ -701,7 +1307,7 @@ export function ConnectedSearch({ project }: { project: Project }) {
                   border: "1px solid var(--line)",
                   textDecoration: "none",
                   backgroundColor: "var(--surface)",
-                  transition: "background 0.15s",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease",
                 }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -860,6 +1466,7 @@ export function ConnectedInbox({ project, initialIdeas = [], role = "owner" }: {
           {ideas.map((item) => (
             <div
               key={item.id}
+              className="idea-card-item"
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -1115,6 +1722,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
                 <button
                   key={repo.id}
                   type="button"
+                  className="context-node-btn"
                   onClick={() =>
                     setSelectedEntity({
                       type: "repository",
@@ -1151,6 +1759,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
                 <button
                   key={note.id}
                   type="button"
+                  className="context-node-btn"
                   onClick={() =>
                     setSelectedEntity({
                       type: "note",
@@ -1187,6 +1796,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
                 <button
                   key={task.id}
                   type="button"
+                  className="context-node-btn"
                   onClick={() =>
                     setSelectedEntity({
                       type: "task",
@@ -1223,6 +1833,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
                 <button
                   key={fc.id}
                   type="button"
+                  className="context-node-btn"
                   onClick={() =>
                     setSelectedEntity({
                       type: "flowchart",
