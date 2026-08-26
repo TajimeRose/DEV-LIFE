@@ -13,8 +13,8 @@ import {
 } from "react";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost" | "danger";
-  size?: "sm" | "md" | "lg";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "outline";
+  size?: "xs" | "sm" | "md" | "lg";
   loading?: boolean;
 };
 
