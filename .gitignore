@@ -212,13 +212,39 @@ credentials/
 *.tar.gz
 
 # =========================================================
-# Local development
+# Local development & AI tools
 # =========================================================
 
 .local/
 dev-data/
 
 .codex
+.codex/
 skills
+skills/
 
 .claude
+.claude/
+.claude.json
+
+# =========================================================
+# Obsidian & Personal Notes
+# =========================================================
+
+.obsidian/
+*.base
+ยังไม่ได้ตั้งชื่อ*
+Untitled*
+
+# =========================================================
+# Media & Heavy Assets
+# =========================================================
+
+*.mp4
+*.mov
+*.webm
+*.avi
+*.mkv
+
+# Root-level scratch public folder (Next.js assets live in Frontend/public/)
+/public/
