@@ -16,7 +16,6 @@ import {
   deleteTask,
   getIdeas,
   getNotes,
-  getProjectContextMap,
   getTasks,
   searchWorkspace,
   updateNote,
@@ -28,6 +27,7 @@ import {
 } from "@/app/actions/data";
 import { BUILTIN_TEMPLATES, type TemplateData } from "@/lib/templates";
 import { Badge, Button, Card, EmptyState, FormField, Input, Modal, Select, Textarea, useToast } from "@/components/ui";
+import { Icon } from "@/components/ui/icons";
 import type { Tables } from "@/lib/database.types";
 import { canEditProject } from "@/lib/projects/permissions";
 import { useProjectRealtime } from "@/lib/realtime/use-project-realtime";
@@ -58,6 +58,58 @@ export function NoProject() {
   return <Card className="empty-workspace"><h1>สร้างโปรเจกต์แรกของคุณ</h1><p>งาน โน้ต และกิจกรรมจะถูกจัดเก็บแยกตามโปรเจกต์</p><form onSubmit={submit}><FormField label="ชื่อโปรเจกต์"><Input value={name} onChange={event => setName(event.target.value)} required maxLength={200} /></FormField>{error && <p className="form-error" role="alert">{error}</p>}<Button variant="primary" loading={pending}>สร้างโปรเจกต์</Button></form></Card>;
 }
 
+function activityLabel(action: string, entityType: string) {
+  if (entityType === "idea" && action === "captured") return "บันทึกไอเดียใหม่";
+  if (action === "created") return `สร้าง${entityTypeLabel(entityType)}ใหม่`;
+  if (action === "updated") return `แก้ไข${entityTypeLabel(entityType)}`;
+  if (action === "deleted") return `ลบ${entityTypeLabel(entityType)}`;
+  if (action === "completed" || action === "done") return `ทำ${entityTypeLabel(entityType)}เสร็จ`;
+  return `${action} ${entityTypeLabel(entityType)}`;
+}
+
+function entityTypeLabel(type: string) {
+  switch (type) {
+    case "task": return "งาน";
+    case "note": return "โน้ต";
+    case "project": return "โปรเจกต์";
+    case "idea": return "ไอเดีย";
+    case "flowchart": return "แผนผัง";
+    case "repository": return "Repository";
+    default: return type;
+  }
+}
+
+function renderEntityIcon(type: string) {
+  switch (type) {
+    case "task": return <Icon name="tasks" size={14} />;
+    case "note": return <Icon name="notes" size={14} />;
+    case "project": return <Icon name="projects" size={14} />;
+    case "idea": return <Icon name="inbox" size={14} />;
+    case "flowchart": return <Icon name="flowchart" size={14} />;
+    case "repository": return <Icon name="repository" size={14} />;
+    default: return <Icon name="activity" size={14} />;
+  }
+}
+
+function taskStatusLabel(status: string) {
+  switch (status) {
+    case "done": return "เสร็จสิ้น";
+    case "review": return "รอตรวจ";
+    case "in_progress": return "กำลังทำ";
+    case "todo": return "รอดำเนินการ";
+    default: return status;
+  }
+}
+
+function taskStatusTone(status: string): "success" | "warning" | "brand" | "neutral" {
+  switch (status) {
+    case "done": return "success";
+    case "review": return "warning";
+    case "in_progress": return "brand";
+    default: return "neutral";
+  }
+}
+
 export function ConnectedDashboard({
   project,
   tasks,
@@ -73,11 +125,12 @@ export function ConnectedDashboard({
   const progress = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
   const openTasks = tasks.length - completed;
   const inReview = tasks.filter((task) => task.status === "review").length;
+  const inProgress = tasks.filter((task) => task.status === "in_progress").length;
   const healthLabel =
     tasks.length === 0
       ? "เริ่มต้นโปรเจกต์"
       : progress >= 75
-      ? "ใกล้เสร็จแล้ว"
+      ? "ใกล้เสร็จสมบูรณ์"
       : progress >= 40
       ? "กำลังดำเนินการ"
       : "อยู่ในช่วงเริ่มต้น";
@@ -85,51 +138,65 @@ export function ConnectedDashboard({
   return (
     <>
       <section className="project-hero">
-        <div>
-          <Badge tone="brand">
-            {project.status === "active" ? "กำลังดำเนินการ" : project.status ?? "ไม่ระบุสถานะ"}
-          </Badge>
+        <div className="project-hero-info">
+          <div className="project-hero-badge-row">
+            <span className="live-status-dot" aria-hidden="true" />
+            <Badge tone="brand">
+              {project.status === "active" ? "กำลังดำเนินการ" : project.status ?? "ไม่ระบุสถานะ"}
+            </Badge>
+            {displayName && <span className="hero-greeting">สวัสดีคุณ <b>{displayName}</b></span>}
+          </div>
           <h1>{project.name}</h1>
-          <p>{displayName ? `สวัสดี ${displayName} — ` : ""}ติดตามงานและกิจกรรมล่าสุดของโปรเจกต์นี้</p>
+          <p>ติดตามสถานะงาน กิจกรรมล่าสุด และความคืบหน้าของพื้นที่ทำงาน</p>
         </div>
         <div className="hero-actions">
-          <Link href="/notes">เปิดโน้ต</Link>
-          <Link className="task-action-link" href="/checklists">
-            ดูงาน
+          <Link className="hero-btn hero-btn-primary" href="/checklists">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>เพิ่มงาน</span>
+          </Link>
+          <Link className="hero-btn hero-btn-secondary" href="/notes">
+            <span>เขียนโน้ต</span>
+          </Link>
+          <Link className="hero-btn hero-btn-ghost" href="/board">
+            <span>บอร์ด Kanban</span>
           </Link>
         </div>
       </section>
 
-      <nav className="project-tabs" aria-label="เมนูภายในโปรเจกต์">
-        <Link className="active" href="/dashboard">
-          ภาพรวม
-        </Link>
-        <Link href="/notes">โน้ต</Link>
-        <Link href="/checklists">งาน</Link>
-        <Link href="/settings/integrations">Repository</Link>
-        <Link href="/activity">กิจกรรม</Link>
-      </nav>
-
       <section className="overview-stats" aria-label="สรุปสถานะงาน">
-        <article>
-          <span>งานทั้งหมด</span>
+        <article className="stat-card">
+          <div className="stat-card-header">
+            <span>งานทั้งหมด</span>
+            <Icon name="tasks" size={14} />
+          </div>
           <b>{tasks.length}</b>
           <small>งานทุกสถานะในโปรเจกต์</small>
         </article>
-        <article>
-          <span>งานที่เปิดอยู่</span>
+        <article className="stat-card">
+          <div className="stat-card-header">
+            <span>งานที่เปิดอยู่</span>
+            <Icon name="overview" size={14} />
+          </div>
           <b>{openTasks}</b>
-          <small>งานที่ยังไม่เสร็จ</small>
+          <small>{inProgress} กำลังทำ · {inReview} รอตรวจ</small>
         </article>
-        <article>
-          <span>เสร็จแล้ว</span>
-          <b>{completed}</b>
-          <small>งานที่ปิดเรียบร้อย</small>
+        <article className="stat-card">
+          <div className="stat-card-header">
+            <span>เสร็จสิ้นแล้ว</span>
+            <Badge tone="success">Done</Badge>
+          </div>
+          <b style={{ color: "var(--success)" }}>{completed}</b>
+          <small>{progress}% ของงานทั้งหมด</small>
         </article>
-        <article className="overview-progress-stat">
-          <span>ความคืบหน้า</span>
+        <article className="stat-card overview-progress-stat">
+          <div className="stat-card-header">
+            <span>ความคืบหน้า</span>
+            <Badge tone="brand" className="stat-health-badge">{healthLabel}</Badge>
+          </div>
           <b>{progress}%</b>
-          <small>คำนวณจากงานที่เสร็จทั้งหมด</small>
           <div
             className="overview-progress-track"
             role="progressbar"
@@ -146,45 +213,62 @@ export function ConnectedDashboard({
       <div className="cockpit-grid">
         <section className="cockpit-main">
           <div className="section-head">
-            <div>
+            <div className="section-title-wrap">
               <h2>งานล่าสุด</h2>
             </div>
-            <Link href="/checklists">ดูงานทั้งหมด</Link>
+            <Link className="section-action-link" href="/checklists">
+              ดูงานทั้งหมด ({tasks.length}) →
+            </Link>
           </div>
           <div className="focus-list">
             {tasks.length ? (
-              tasks.slice(0, 5).map((task, index) => (
-                <article key={task.id}>
-                  <span className={task.status === "done" ? "task-index done" : "task-index"}>
-                    {task.status === "done" ? "เสร็จ" : String(index + 1).padStart(2, "0")}
-                  </span>
-                  <div>
-                    <b>{task.title}</b>
-                    <small>
-                      {task.status} · {task.priority}
-                    </small>
+              tasks.slice(0, 5).map((task) => (
+                <Link key={task.id} href="/checklists" className="focus-task-item">
+                  <Badge tone={taskStatusTone(task.status)}>
+                    {taskStatusLabel(task.status)}
+                  </Badge>
+                  <div className="focus-task-title-wrap">
+                    <b className="focus-task-title">{task.title}</b>
+                    {task.description && (
+                      <span className="focus-task-sub">{task.description}</span>
+                    )}
                   </div>
-                </article>
+                  <div className="focus-task-badges">
+                    <span className={`priority ${priorityClass(task.priority)}`}>
+                      {priorityLabel(task.priority)}
+                    </span>
+                    {task.due_date && (
+                      <small className="focus-task-date">กำหนดส่ง: {task.due_date}</small>
+                    )}
+                  </div>
+                </Link>
               ))
             ) : (
-              <p className="empty-copy">ยังไม่มีงานในโปรเจกต์นี้</p>
+              <div className="empty-tasks-box">
+                <p>ยังไม่มีงานในโปรเจกต์นี้</p>
+                <Link className="ui-button ui-button-sm ui-button-secondary" href="/checklists">
+                  สร้างงานแรก
+                </Link>
+              </div>
             )}
           </div>
 
           <div className="section-head activity-head">
-            <div>
-              <h2>กิจกรรมล่าสุด</h2>
+            <div className="section-title-wrap">
+              <h2>กิจกรรมล่าสุดใน Workspace</h2>
             </div>
-            <Link href="/activity">ดูประวัติทั้งหมด</Link>
+            <Link className="section-action-link" href="/activity">
+              ดูประวัติทั้งหมด →
+            </Link>
           </div>
           <div className="compact-activity">
-            {activities.slice(0, 3).map((item) => (
-              <article key={item.id}>
-                <i>{item.entity_type.slice(0, 2).toUpperCase()}</i>
-                <div>
-                  <b>
-                    {item.action} {item.entity_type}
-                  </b>
+            {activities.slice(0, 5).map((item) => (
+              <article key={item.id} className="dashboard-activity-row">
+                <span className="activity-icon-pill" aria-hidden="true">
+                  {renderEntityIcon(item.entity_type)}
+                </span>
+                <div className="activity-text-wrap">
+                  <b>{activityLabel(item.action, item.entity_type)}</b>
                   <small>
                     {item.created_at
                       ? new Date(item.created_at).toLocaleString("th-TH")
@@ -193,7 +277,9 @@ export function ConnectedDashboard({
                 </div>
               </article>
             ))}
-            {!activities.length && <p className="empty-copy">ยังไม่มีกิจกรรม</p>}
+            {!activities.length && (
+              <p className="empty-copy">ยังไม่มีกิจกรรมที่บันทึกไว้</p>
+            )}
           </div>
         </section>
 
@@ -201,9 +287,10 @@ export function ConnectedDashboard({
           <Card className="project-health">
             <div className="section-head">
               <div>
-                <h2>{healthLabel}</h2>
+                <h2>สุขภาพโปรเจกต์</h2>
+                <small style={{ color: "var(--muted)" }}>{healthLabel}</small>
               </div>
-              <strong>{progress}%</strong>
+              <strong className="health-stat-number">{progress}%</strong>
             </div>
             <div
               className="progress"
@@ -215,23 +302,68 @@ export function ConnectedDashboard({
             >
               <i style={{ width: `${progress}%` }} />
             </div>
-            <dl>
+            <dl className="health-metrics-list">
               <div>
-                <dt>งานที่เปิดอยู่</dt>
-                <dd>{openTasks}</dd>
+                <dt>งานที่เปิดอยู่ (Active)</dt>
+                <dd><b>{openTasks}</b></dd>
               </div>
               <div>
-                <dt>กำลังตรวจสอบ</dt>
-                <dd>{inReview}</dd>
+                <dt>กำลังทำ (In Progress)</dt>
+                <dd><b>{inProgress}</b></dd>
               </div>
               <div>
-                <dt>กิจกรรมล่าสุด</dt>
-                <dd>{activities.length}</dd>
+                <dt>รอตรวจสอบ (In Review)</dt>
+                <dd><b>{inReview}</b></dd>
+              </div>
+              <div>
+                <dt>เสร็จสมบูรณ์ (Done)</dt>
+                <dd><b style={{ color: "var(--success)" }}>{completed}</b></dd>
+              </div>
+              <div>
+                <dt>บันทึกกิจกรรมล่าสุด</dt>
+                <dd><b>{activities.length} รายการ</b></dd>
               </div>
             </dl>
-            <Link className="project-health-link" href="/checklists">
-              จัดการงาน
+            <Link className="project-health-link" href="/board">
+              <span>เปิดบอร์ด Kanban</span>
+              <span aria-hidden="true">→</span>
             </Link>
+          </Card>
+
+          <Card className="quick-tools-card">
+            <div className="section-head" style={{ marginBottom: "14px" }}>
+              <h2>เครื่องมือด่วน</h2>
+            </div>
+            <div className="quick-tools-grid">
+              <Link href="/inbox" className="quick-tool-item">
+                <span className="quick-tool-icon"><Icon name="inbox" size={16} /></span>
+                <div>
+                  <b>กล่องไอเดีย</b>
+                  <small>จดความคิดเร็วๆ ไม่ให้สูญหาย</small>
+                </div>
+              </Link>
+              <Link href="/ai-tools" className="quick-tool-item">
+                <span className="quick-tool-icon"><Icon name="ai" size={16} /></span>
+                <div>
+                  <b>ผู้ช่วย AI</b>
+                  <small>แยก Requirement เป็น Tasks</small>
+                </div>
+              </Link>
+              <Link href="/flowchart" className="quick-tool-item">
+                <span className="quick-tool-icon"><Icon name="flowchart" size={16} /></span>
+                <div>
+                  <b>แผนผัง Flowchart</b>
+                  <small>ออกแบบ Process และ System Flow</small>
+                </div>
+              </Link>
+              <Link href="/context-map" className="quick-tool-item">
+                <span className="quick-tool-icon"><Icon name="contextMap" size={16} /></span>
+                <div>
+                  <b>แผนที่บริบท</b>
+                  <small>ดูโครงสร้างโปรเจกต์ทั้งหมด</small>
+                </div>
+              </Link>
+            </div>
           </Card>
         </aside>
       </div>
@@ -1195,10 +1327,10 @@ export function ConnectedBoard({
                       margin: "4px 0",
                     }}
                   >
-                    {task.due_date && <span>📅 {task.due_date}</span>}
-                    {task.branch_name && <span>🌿 {task.branch_name}</span>}
+                    {task.due_date && <span>กำหนดส่ง: {task.due_date}</span>}
+                    {task.branch_name && <span>สาขา: {task.branch_name}</span>}
                     {task.linked_pull_request_number && (
-                      <span>🔀 #{task.linked_pull_request_number}</span>
+                      <span>PR #{task.linked_pull_request_number}</span>
                     )}
                   </div>
                   <Select
@@ -1499,10 +1631,10 @@ export function ConnectedInbox({ project, initialIdeas = [], role = "owner" }: {
                 {editable && (
                   <div style={{ display: "flex", gap: "6px" }}>
                     <Button size="sm" variant="secondary" onClick={() => toTask(item)} disabled={pending}>
-                      📋 แปลงเป็น Task
+                      แปลงเป็น Task
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => toNote(item)} disabled={pending}>
-                      📝 แปลงเป็น Note
+                      แปลงเป็น Note
                     </Button>
                     <Button size="sm" variant="danger" onClick={() => remove(item.id)} disabled={pending}>
                       ลบ
@@ -1578,7 +1710,7 @@ export function ConnectedTemplates({ project, role = "owner" }: { project: Proje
 
             <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <small style={{ color: "var(--muted)" }}>
-                📝 1 Note · 📋 {tmpl.tasks.length} Tasks
+                1 โน้ต · {tmpl.tasks.length} งาน
               </small>
               <div style={{ display: "flex", gap: "8px" }}>
                 <Button size="sm" variant="ghost" onClick={() => setSelectedTemplate(tmpl)}>
@@ -1708,7 +1840,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
               textAlign: "center",
             }}
           >
-            🏢 {initialData.project.name}
+            {initialData.project.name}
           </div>
 
           <div style={{ width: "2px", height: "24px", backgroundColor: "var(--brand)" }} />
@@ -1717,7 +1849,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", width: "100%" }}>
             {/* Repositories Section */}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
-              <Badge tone="brand">📦 Repositories ({initialData.repositories.length})</Badge>
+              <Badge tone="brand">Repositories ({initialData.repositories.length})</Badge>
               {initialData.repositories.map((repo) => (
                 <button
                   key={repo.id}
@@ -1746,7 +1878,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
                     whiteSpace: "nowrap",
                   }}
                 >
-                  🐙 {repo.name}
+                  {repo.name}
                 </button>
               ))}
               {!initialData.repositories.length && <small style={{ color: "var(--muted)" }}>ไม่มี Repo</small>}
@@ -1754,7 +1886,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
 
             {/* Notes Section */}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
-              <Badge tone="neutral">📝 Notes ({initialData.notes.length})</Badge>
+              <Badge tone="neutral">Notes ({initialData.notes.length})</Badge>
               {initialData.notes.map((note) => (
                 <button
                   key={note.id}
@@ -1783,7 +1915,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
                     whiteSpace: "nowrap",
                   }}
                 >
-                  📄 {note.title}
+                  {note.title}
                 </button>
               ))}
               {!initialData.notes.length && <small style={{ color: "var(--muted)" }}>ไม่มีโน้ต</small>}
@@ -1791,7 +1923,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
 
             {/* Tasks Section */}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
-              <Badge tone="warning">📋 Tasks ({initialData.tasks.length})</Badge>
+              <Badge tone="warning">Tasks ({initialData.tasks.length})</Badge>
               {initialData.tasks.slice(0, 5).map((task) => (
                 <button
                   key={task.id}
@@ -1820,7 +1952,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {task.status === "done" ? "✅" : "⏳"} {task.title}
+                  {task.title}
                 </button>
               ))}
               {!initialData.tasks.length && <small style={{ color: "var(--muted)" }}>ไม่มีงาน</small>}
@@ -1828,7 +1960,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
 
             {/* Flowcharts Section */}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
-              <Badge tone="brand">📊 Flowcharts ({initialData.flowcharts.length})</Badge>
+              <Badge tone="brand">Flowcharts ({initialData.flowcharts.length})</Badge>
               {initialData.flowcharts.map((fc) => (
                 <button
                   key={fc.id}
@@ -1857,7 +1989,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
                     whiteSpace: "nowrap",
                   }}
                 >
-                  🔀 {fc.name}
+                  {fc.name}
                 </button>
               ))}
               {!initialData.flowcharts.length && <small style={{ color: "var(--muted)" }}>ไม่มีผังงาน</small>}
@@ -1885,7 +2017,7 @@ export function ConnectedContextMap({ initialData }: { initialData: ContextMapDa
                   className="ui-button ui-button-primary"
                   style={{ textDecoration: "none", marginTop: "12px", textAlign: "center" }}
                 >
-                  เปิดหน้านี้ทันที ↗
+                  เปิดหน้านี้ทันที
                 </Link>
               )}
             </div>
@@ -1957,7 +2089,7 @@ export function ConnectedAiTools({ project, role = "owner" }: { project: Project
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "16px" }}>
         {/* Input Form */}
         <Card className="feature-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-          <h2 style={{ fontSize: "16px", margin: 0 }}>💡 ป้อนโจทย์หรือข้อกำหนด (Requirement Prompt)</h2>
+          <h2 style={{ fontSize: "16px", margin: 0 }}>ป้อนโจทย์หรือข้อกำหนด (Requirement Prompt)</h2>
           <Textarea
             value={requirementText}
             onChange={(e) => setRequirementText(e.target.value)}
@@ -1972,14 +2104,14 @@ export function ConnectedAiTools({ project, role = "owner" }: { project: Project
               loading={analyzing}
               disabled={!requirementText.trim()}
             >
-              🤖 วิเคราะห์และแยกย่อย Tasks
+              วิเคราะห์และแยกย่อย Tasks
             </Button>
           </div>
         </Card>
 
         {/* AI Output Preview Panel */}
         <Card className="feature-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
-          <h2 style={{ fontSize: "16px", margin: 0 }}>📋 ผลการวิเคราะห์จาก AI</h2>
+          <h2 style={{ fontSize: "16px", margin: 0 }}>ผลการวิเคราะห์จาก AI</h2>
 
           {analysisResult ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -2016,7 +2148,7 @@ export function ConnectedAiTools({ project, role = "owner" }: { project: Project
                   loading={creating}
                   style={{ width: "100%", marginTop: "8px" }}
                 >
-                  🚀 นำเข้า Tasks ทั้งหมดเข้าสู่โปรเจกต์
+                  นำเข้า Tasks ทั้งหมดเข้าสู่โปรเจกต์
                 </Button>
               )}
             </div>

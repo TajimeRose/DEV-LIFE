@@ -22,20 +22,55 @@ export function RepositoryCard({
   projectId: string;
   repository: ConnectedRepository;
 }) {
-  return <Card as="article" className="connected-repository-card">
-    <div>
-      <small>{repository.github_owner}</small>
-      <h3>{repository.github_name}</h3>
-      <p>{repository.default_branch ? `Default branch: ${repository.default_branch}` : "Default branch unavailable"}</p>
-    </div>
-    <div className="connected-repository-status">
-      <Badge tone={repository.sync_status === "failed" ? "danger" : repository.sync_status === "completed" ? "success" : "neutral"}>
-        {repository.sync_status}
-      </Badge>
-      {repository.is_private && <Badge tone="warning">Private</Badge>}
-    </div>
-    <Link href={`/projects/${projectId}/repositories/${repository.id}`}>เปิดประวัติ</Link>
-  </Card>;
+  return (
+    <Card as="article" className="connected-repository-card">
+      <div className="connected-repo-header">
+        <div className="connected-repo-meta">
+          <small className="connected-repo-owner">{repository.github_owner}</small>
+          <h3 className="connected-repo-title">{repository.github_name}</h3>
+        </div>
+        <div className="connected-repository-status">
+          <Badge
+            tone={
+              repository.sync_status === "failed"
+                ? "danger"
+                : repository.sync_status === "completed"
+                ? "success"
+                : "neutral"
+            }
+          >
+            {repository.sync_status === "completed" ? "เชื่อมต่อสมบูรณ์" : repository.sync_status}
+          </Badge>
+          {repository.is_private && <Badge tone="warning">Private</Badge>}
+        </div>
+      </div>
+      <div className="connected-repo-footer">
+        <div className="connected-repo-branch">
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="6" y1="3" x2="6" y2="15" />
+            <circle cx="18" cy="6" r="3" />
+            <circle cx="6" cy="18" r="3" />
+            <path d="M18 9a9 9 0 0 1-9 9" />
+          </svg>
+          <span>{repository.default_branch ? `สาขา: ${repository.default_branch}` : "สาขาหลัก: main"}</span>
+        </div>
+        <Link className="connected-repo-open-link" href={`/projects/${projectId}/repositories/${repository.id}`}>
+          <span>เปิด Workspace</span>
+          <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+    </Card>
+  );
 }
 
 export function RepositoryList({

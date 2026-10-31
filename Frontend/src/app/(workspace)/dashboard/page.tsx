@@ -3,7 +3,7 @@ import { getCurrentWorkspace, getProjectWorkspace } from "@/lib/current-workspac
 
 export default async function Page() {
   const [data, { user }] = await Promise.all([
-    getProjectWorkspace({ tasks: true, activities: true, activityLimit: 3 }),
+    getProjectWorkspace({ tasks: true, activities: true, activityLimit: 6 }),
     getCurrentWorkspace(),
   ]);
 

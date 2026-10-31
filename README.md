@@ -14,7 +14,7 @@
 
 ## Learning & Exploration Objectives
 
-This project was conceived and developed during my 1st year at Bangkok University as a hands-on learning laboratory to master modern full-stack web engineering, specifically focusing on:
+This project was conceived and developed as a hands-on learning laboratory to master modern full-stack web engineering, specifically focusing on:
 
 1. **Next.js (App Router) as a Full-Stack Monolith:**
    - Leveraging Next.js for both the **Frontend** (Server Components, Client Components, React 19) and the **Backend** (Server Actions, Route Handlers, and session proxies).

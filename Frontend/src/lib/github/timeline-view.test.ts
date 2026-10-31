@@ -30,16 +30,16 @@ test("repository synchronization events stay out of the user-facing timeline", (
 });
 
 test("timeline mobile layout prevents horizontal page overflow", async () => {
-  const css = await readFile(new URL("../../app/globals.css", import.meta.url), "utf8");
+  const css = await readFile(new URL("../../app/swiss.css", import.meta.url), "utf8");
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*?\.timeline-event-body\s*\{/);
   assert.match(css, /\.repository-history-panel\s*\{[^}]*overflow:\s*hidden;/);
 });
 
 test("long modal content scrolls inside the dialog", async () => {
-  const css = await readFile(new URL("../../app/globals.css", import.meta.url), "utf8");
-  assert.match(css, /\.ui-modal\s*\{[^}]*max-height:[^;}]+;[^}]*display:\s*flex;/);
+  const css = await readFile(new URL("../../app/swiss.css", import.meta.url), "utf8");
+  assert.match(css, /\.ui-modal\b[^{]*\{[^}]*max-height:[^;}]+;[^}]*display:\s*flex;/);
   assert.match(css, /\.ui-modal-body\s*\{[^}]*overflow-y:\s*auto;/);
-  assert.match(css, /\.ui-modal-layer\s*\{[^}]*overscroll-behavior:\s*contain[;}]/);
+  assert.match(css, /\.ui-modal-layer\b[^{]*\{[^}]*overscroll-behavior:\s*contain[;}]/);
 });
 
 test("canonical repository workspace CSS stays namespaced and responsive", async () => {
